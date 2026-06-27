@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Auditoria 5S">
 <title>Auditoria 5S — Cobeb</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -180,24 +183,19 @@ input[type=file]{display:none}
   <div style="padding:16px;display:flex;flex-direction:column;gap:8px" id="history-list"></div>
 </div>
 
-<script type="module">
-// ⚠️ COLE SUA CONFIGURAÇÃO FIREBASE AQUI
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
   authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
   projectId: "controle-de-qualidade-armazem",
   storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
   messagingSenderId: "76797503134",
-  appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+  appId: "1:76797503114:web:86afbfc6373f5d2a08bd8f"
 };
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 window.addEventListener('online',()=>document.getElementById('offline-banner').style.display='none');
 window.addEventListener('offline',()=>document.getElementById('offline-banner').style.display='block');
@@ -212,12 +210,12 @@ const SENSOS = [
 
 let st = {user:null,profile:null,area:'',arm:'',owner:'',dt:'',currentSenso:0,answers:{},comments:{},photos:{}};
 
-onAuthStateChanged(auth, async user=>{
+auth.onAuthStateChanged(async user=>{
   if(user){
     try {
-      const snap=await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
-      const nome = snap.exists()?snap.data().nome:user.email.split('@')[0];
-      st.user=user; st.profile={nome,...(snap.exists()?snap.data():{})};
+      const snap=await db.collection('usuarios').doc(user.email.split('@')[0]));
+      const nome = snap.exists?snap.data().nome:user.email.split('@')[0];
+      st.user=user; st.profile={nome,...(snap.exists?snap.data():{})};
       document.getElementById('home-user').textContent=`${nome} — Supervisora`;
     } catch(e) {
       st.user=user; st.profile={nome:user.email.split('@')[0]};
@@ -231,11 +229,11 @@ window.doLogin=async function(){
   const cpf=document.getElementById('login-cpf').value.trim();
   const dt=document.getElementById('login-senha').value;
   if(!cpf||!dt){showErr('Preencha CPF e data de nascimento.');return;}
-  try{const [y,m,d]=dt.split('-');await signInWithEmailAndPassword(auth,`${cpf}@cobeb.com`,`${d}${m}${y}`);}
+  try{const [y,m,d]=dt.split('-');await auth.signInWithEmailAndPassword(`${cpf}@cobeb.com`,`${d}${m}${y}`);}
   catch(e){showErr('CPF ou data incorretos.');}
 };
 function showErr(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block';}
-window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
+window.doLogout=async()=>{await auth.signOut();goScreen('screen-login');};
 function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 window.goScreen = goScreen;
 
@@ -245,7 +243,7 @@ window.loadAreaOwner=async function(){
   if(!arm||!area){document.getElementById('s-owner').value='';return;}
   const mk=new Date().toISOString().slice(0,7);
   try{
-    const snap=await getDoc(doc(db,'armazens',arm,'donos_area',mk));
+    const snap=await db.collection('armazens',arm,'donos_area',mk));
     const data=snap.data()||{};
     document.getElementById('s-owner').value=data[area]||'(não definido)';
   }catch(e){document.getElementById('s-owner').value='(não definido)';}
@@ -347,31 +345,31 @@ function showSummary(){
 window.salvarAuditoria=async function(){
   const btn=document.getElementById('btn-salvar');btn.textContent='Salvando...';btn.disabled=true;
   try{
-    await addDoc(collection(db,'armazens',st.arm,'auditorias_5s'),{
-      area:st.area,owner:st.owner,auditora:st.profile?.nome||'Supervisora',
-      datetime:st.dt,overall:st._overall,
+    await db.collection('armazens').doc(st.arm).collection('auditorias_5s').add({
+      area:st.area, owner:st.owner, auditora:st.profile?.nome||'Supervisora',
+      datetime:st.dt, overall:st._overall,
       sensoResults:st._sensoRes.map(r=>({label:r.label,ok:r.ok,nok:r.nok,na:r.na,pct:r.pct})),
-      timestamp:serverTimestamp()
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
     });
     alert('Auditoria salva com sucesso! ✓');
     goScreen('screen-home');
-  }catch(e){alert('Erro ao salvar. Verifique a conexão.');}
+  }catch(e){console.error(e);alert('Erro ao salvar. Verifique a conexão.');}
   btn.textContent='Finalizar e Salvar ✓';btn.disabled=false;
 };
 
 window.loadAndShowHistory=async function(){
   goScreen('screen-history');
-  const arm=document.getElementById('s-arm')?.value||'Pará de Minas';
+  const arm=st.arm||document.getElementById('s-arm')?.value||'Pará de Minas';
   const list=document.getElementById('history-list');
   list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>';
   try{
-    const snap=await getDocs(query(collection(db,'armazens',arm,'auditorias_5s'),orderBy('timestamp','desc')));
-    if(!snap.docs.length){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma auditoria registrada</div>';return;}
+    const snap=await db.collection('armazens').doc(arm).collection('auditorias_5s').orderBy('timestamp','desc').get();
+    if(snap.empty){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma auditoria registrada</div>';return;}
     list.innerHTML=snap.docs.map(d=>{
       const a=d.data();const c=a.overall>=80?'var(--ok)':a.overall>=60?'var(--warn)':'var(--nok)';
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div><div style="font-weight:600;font-size:14px">${a.area}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${a.arm||arm} · 👤 ${a.owner}</div></div>
+          <div><div style="font-weight:600;font-size:14px">${a.area}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${arm} · 👤 ${a.owner||'—'}</div></div>
           <div style="font-size:22px;font-weight:700;color:${c}">${a.overall}%</div>
         </div>
         <div class="adh-bar"><div class="adh-fill" style="width:${a.overall}%;background:${c}"></div></div>

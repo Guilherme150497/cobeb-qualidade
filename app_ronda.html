@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ronda Qualidade">
 <title>Ronda de Qualidade — Cobeb</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -200,8 +203,7 @@ input[type=file]{display:none}
   </div>
 </div>
 
-<script type="module">
-// ⚠️ COLE SUA CONFIGURAÇÃO FIREBASE AQUI
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
   authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
@@ -211,15 +213,9 @@ const firebaseConfig = {
   appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
 };
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, doc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 window.addEventListener('online', ()=>document.getElementById('offline-banner').style.display='none');
 window.addEventListener('offline', ()=>document.getElementById('offline-banner').style.display='block');
@@ -245,13 +241,12 @@ const USERS_BY_ARM = {
 
 let st = {user:null,profile:null,arm:'',dt:'',currentArea:0,answers:{},comments:{},photos:{},tasks:[],pendingKey:null,selExec:null,rondaId:null};
 
-onAuthStateChanged(auth, async user => {
+auth.onAuthStateChanged(async user => {
   if(user) {
     try {
-      const {getDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-      const snap = await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
-      const nome = snap.exists() ? snap.data().nome : user.email.split('@')[0];
-      st.user=user; st.profile={nome, ...( snap.exists()?snap.data():{})};
+      const snap = await db.collection('usuarios').doc(user.email.split('@')[0]).get();
+      const nome = snap.exists ? snap.data().nome : user.email.split('@')[0];
+      st.user=user; st.profile={nome, ...(snap.exists?snap.data():{})};
       document.getElementById('home-sub').textContent=`${nome} — Supervisora`;
     } catch(e) {
       st.user=user; st.profile={nome: user.email.split('@')[0]};
@@ -267,11 +262,11 @@ window.doLogin = async function(){
   if(!cpf||cpf.length<11||!dt){showErr('Preencha CPF e data de nascimento.');return;}
   try{
     const [y,m,d]=dt.split('-');
-    await signInWithEmailAndPassword(auth,`${cpf}@cobeb.com`,`${d}${m}${y}`);
+    await auth.signInWithEmailAndPassword(`${cpf}@cobeb.com`,`${d}${m}${y}`);
   }catch(e){showErr('CPF ou data de nascimento incorretos.');}
 };
 function showErr(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block';}
-window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
+window.doLogout=async()=>{await auth.signOut();goScreen('screen-login');};
 
 function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
 window.goScreen = goScreen;
@@ -411,20 +406,18 @@ window.finalizarRonda=async function(){
   btn.textContent='Salvando...';btn.disabled=true;
   try {
     const arm=st.arm;
-    // Salva ronda no Firestore
-    const rondaRef=await addDoc(collection(db,'armazens',arm,'rondas'),{
-      datetime:st.dt,auditora:st.profile?.nome||'Talita',
-      overall:st._overall,nok:Object.values(st.answers).filter(a=>a==='nok').length,
-      timestamp:serverTimestamp()
+    const rondaRef=await db.collection('armazens').doc(arm).collection('rondas').add({
+      datetime:st.dt, auditora:st.profile?.nome||'Supervisora',
+      overall:st._overall, nok:Object.values(st.answers).filter(a=>a==='nok').length,
+      timestamp:firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Salva tarefas
     for(const t of st.tasks){
-      await addDoc(collection(db,'armazens',arm,'tarefas'),{
-        desc:t.desc||t.question,area:t.area,executor:t.executor||'',prazo:t.prazo||'',
-        status:'aberta',tipo:'ronda',rondaId:rondaRef.id,timestamp:serverTimestamp()
+      await db.collection('armazens').doc(arm).collection('tarefas').add({
+        desc:t.desc||t.question, area:t.area, executor:t.executor||'', prazo:t.prazo||'',
+        status:'aberta', tipo:'ronda', rondaId:rondaRef.id,
+        timestamp:firebase.firestore.FieldValue.serverTimestamp()
       });
     }
-    // Upload fotos (simplificado)
     await loadHistory();
     alert('Ronda finalizada e salva! ✓');
     goScreen('screen-home');
@@ -436,16 +429,16 @@ window.finalizarRonda=async function(){
 };
 
 async function loadHistory(){
-  const arm=document.getElementById('setup-arm')?.value||'Pará de Minas';
+  const arm=st.arm||'Pará de Minas';
   const list=document.getElementById('history-list');
   try {
-    const snap=await getDocs(query(collection(db,'armazens',arm,'rondas'),orderBy('timestamp','desc')));
-    if(!snap.docs.length){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma ronda registrada ainda</div>';return;}
+    const snap=await db.collection('armazens').doc(arm).collection('rondas').orderBy('timestamp','desc').get();
+    if(snap.empty){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma ronda registrada ainda</div>';return;}
     list.innerHTML=snap.docs.map(d=>{
-      const r=d.data();const c=r.overall>=80?'var(--ok)':r.overall>=60?'var(--warn)':'var(--nok)';
+      const r=d.data(); const c=r.overall>=80?'var(--ok)':r.overall>=60?'var(--warn)':'var(--nok)';
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div><div style="font-weight:600;font-size:14px">${r.auditora}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${r.datetime?new Date(r.datetime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):''}</div></div>
+          <div><div style="font-weight:600;font-size:14px">${r.auditora||'—'}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${r.datetime?new Date(r.datetime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):''}</div></div>
           <div style="font-size:22px;font-weight:700;color:${c}">${r.overall||0}%</div>
         </div>
         <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:${r.overall||0}%;height:100%;background:${c};border-radius:99px"></div></div>
