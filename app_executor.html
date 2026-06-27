@@ -291,6 +291,7 @@ function goScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
 }
+window.goScreen = goScreen;
 
 window.appTab = function(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));

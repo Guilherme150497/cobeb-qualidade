@@ -274,6 +274,7 @@ function showErr(msg){const el=document.getElementById('login-error');el.textCon
 window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
 
 function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+window.goScreen = goScreen;
 
 window.startRonda=function(){
   const arm=document.getElementById('setup-arm').value;

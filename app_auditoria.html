@@ -237,6 +237,7 @@ window.doLogin=async function(){
 function showErr(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block';}
 window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
 function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+window.goScreen = goScreen;
 
 window.loadAreaOwner=async function(){
   const arm=document.getElementById('s-arm').value;
