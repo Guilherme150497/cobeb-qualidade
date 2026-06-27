@@ -214,8 +214,16 @@ let st = {user:null,profile:null,area:'',arm:'',owner:'',dt:'',currentSenso:0,an
 
 onAuthStateChanged(auth, async user=>{
   if(user){
-    const snap=await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
-    if(snap.exists()){st.user=user;st.profile=snap.data();document.getElementById('home-user').textContent=`${st.profile.nome} — Supervisora`;goScreen('screen-home');}
+    try {
+      const snap=await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
+      const nome = snap.exists()?snap.data().nome:user.email.split('@')[0];
+      st.user=user; st.profile={nome,...(snap.exists()?snap.data():{})};
+      document.getElementById('home-user').textContent=`${nome} — Supervisora`;
+    } catch(e) {
+      st.user=user; st.profile={nome:user.email.split('@')[0]};
+      document.getElementById('home-user').textContent='Supervisora';
+    }
+    goScreen('screen-home');
   } else goScreen('screen-login');
 });
 

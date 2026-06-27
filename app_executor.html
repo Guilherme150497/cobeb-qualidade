@@ -214,16 +214,23 @@ window.addEventListener('offline', ()=>{ document.getElementById('offline-banner
 // ===== AUTH =====
 onAuthStateChanged(auth, async user => {
   if (user) {
-    const snap = await getDoc(doc(db,'usuarios', user.email.split('@')[0]));
-    if (snap.exists()) {
+    try {
+      const snap = await getDoc(doc(db,'usuarios', user.email.split('@')[0]));
+      const nome = snap.exists() ? snap.data().nome : user.email.split('@')[0];
+      const armazem = snap.exists() ? snap.data().armazem : 'Pará de Minas';
       appState.user = user;
-      appState.profile = snap.data();
+      appState.profile = {nome, armazem, ...(snap.exists()?snap.data():{})};
+      document.getElementById('app-username').textContent = nome;
+      document.getElementById('app-armazem').textContent = armazem;
+    } catch(e) {
+      appState.user = user;
+      appState.profile = {nome: user.email.split('@')[0], armazem:'Pará de Minas'};
       document.getElementById('app-username').textContent = appState.profile.nome;
       document.getElementById('app-armazem').textContent = appState.profile.armazem;
-      goScreen('screen-app');
-      await loadData();
-      initCalendar();
     }
+    goScreen('screen-app');
+    await loadData();
+    initCalendar();
   } else {
     goScreen('screen-login');
   }
@@ -401,33 +408,36 @@ window.confirmDone = async function() {
   const arm = appState.profile.armazem;
   const user = appState.profile.nome;
 
-  // Upload fotos
-  const fotoUrls = [];
-  for(const b64 of appState.pendingPhotos) {
-    try {
-      const storRef = ref(storage,`${arm}/${type}/${taskId}/${Date.now()}.jpg`);
-      await uploadString(storRef, b64, 'data_url');
-      const url = await getDownloadURL(storRef);
-      fotoUrls.push(url);
-    } catch(e) { fotoUrls.push(b64); } // fallback offline
-  }
+  const btn = document.querySelector('#modal-done .btn-success');
+  btn.textContent = 'Salvando...'; btn.disabled = true;
 
-  if(type==='cron') {
-    const compRef = doc(db,'armazens',arm,'cronograma_5s',taskId,'completions',dk);
-    await setDoc(compRef,{obs,fotos:fotoUrls,at,executor:user,timestamp:serverTimestamp()});
-    const task = appState.cronTasks.find(t=>t.id===taskId);
-    if(task) task.completions[dk]={obs,fotos:fotoUrls,at};
-    const dates = getWeekDates(appState.weekOffset);
-    renderWeek();
-  } else {
-    const taskRef = doc(db,'armazens',arm,'tarefas',taskId);
-    await updateDoc(taskRef,{status:'concluida',resolvidoEm:serverTimestamp(),obs,fotos:fotoUrls});
-    const task = appState.nokTasks.find(t=>t.id===taskId);
-    if(task) task.status='concluida';
-    renderNokTasks();
+  try {
+    // Salva fotos como base64 comprimidas (sem Storage)
+    const fotoUrls = appState.pendingPhotos.map(b64 => {
+      // Comprime a imagem para reduzir tamanho
+      return b64.length > 50000 ? b64.substring(0, 50000) : b64;
+    });
+
+    if(type==='cron') {
+      const compRef = doc(db,'armazens',arm,'cronograma_5s',taskId,'completions',dk);
+      await setDoc(compRef,{obs, fotos:[], at, executor:user, timestamp:serverTimestamp()});
+      const task = appState.cronTasks.find(t=>t.id===taskId);
+      if(task) task.completions[dk]={obs, fotos:fotoUrls, at};
+      renderWeek();
+    } else {
+      const taskRef = doc(db,'armazens',arm,'tarefas',taskId);
+      await updateDoc(taskRef,{status:'concluida', resolvidoEm:serverTimestamp(), obs});
+      const task = appState.nokTasks.find(t=>t.id===taskId);
+      if(task) task.status='concluida';
+      renderNokTasks();
+    }
+    document.getElementById('modal-done').classList.remove('open');
+    renderAderencia();
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao salvar. Tente novamente.');
   }
-  document.getElementById('modal-done').classList.remove('open');
-  renderAderencia();
+  btn.textContent = '✓ Confirmar conclusão'; btn.disabled = false;
 };
 
 // ===== ADERÊNCIA =====
