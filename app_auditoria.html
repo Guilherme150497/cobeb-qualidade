@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a1a18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Auditoria 5S">
+<title>Auditoria 5S — Cobeb</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f4f0;--surface:#fff;--surface2:#f8f8f5;
+  --border:#e0dfd8;--border-strong:#c8c7be;
+  --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a92;
+  --accent:#1a56db;--accent-bg:#eef3fd;--accent-border:#93b4f5;
+  --ok:#16a34a;--ok-bg:#f0fdf4;--ok-border:#86efac;
+  --warn:#ca8a04;--warn-bg:#fefce8;
+  --nok:#dc2626;--nok-bg:#fef2f2;--nok-border:#fca5a5;
+  --na:#92400e;--na-bg:#fffbeb;
+  --radius:10px;--pad:16px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;min-height:100vh;padding-bottom:80px}
+.screen{display:none}.screen.active{display:block}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px var(--pad);position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.header h1{font-size:17px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3)}
+.btn-back{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);padding:0 8px 0 0}
+.btn{padding:11px 16px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;width:100%}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+.btn-success{background:var(--ok);color:#fff}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px var(--pad);display:flex;gap:10px;z-index:100}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.form-group select,.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font-size:15px;background:var(--surface);color:var(--text);outline:none;appearance:none}
+.progress-wrap{background:var(--surface);padding:10px var(--pad);border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:90}
+.progress-info{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;color:var(--text2)}
+.progress-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width 0.3s}
+.senso-tabs{display:flex;overflow-x:auto;gap:6px;padding:10px var(--pad);background:var(--surface2);border-bottom:1px solid var(--border);scrollbar-width:none}
+.senso-tabs::-webkit-scrollbar{display:none}
+.senso-tab{flex-shrink:0;padding:5px 12px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);white-space:nowrap}
+.senso-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.senso-tab.done{border-color:var(--ok-border);background:var(--ok-bg);color:var(--ok)}
+.check-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.check-question{padding:12px;font-size:14px;line-height:1.4}
+.check-options{display:flex;border-top:1px solid var(--border)}
+.check-btn{flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--text3);transition:all 0.15s}
+.check-btn:not(:last-child){border-right:1px solid var(--border)}
+.check-btn.ok.selected{background:var(--ok-bg);color:var(--ok)}
+.check-btn.nok.selected{background:var(--nok-bg);color:var(--nok)}
+.check-btn.na.selected{background:var(--na-bg);color:var(--na)}
+.check-expand{padding:0 12px 10px;display:none}
+.check-expand.open{display:block;padding-top:8px}
+.check-expand input{width:100%;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:13px;outline:none;background:var(--surface2)}
+.photo-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px dashed var(--border-strong);border-radius:6px;background:var(--surface2);cursor:pointer;font-size:13px;color:var(--text2);width:100%;margin-top:6px}
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+input[type=file]{display:none}
+.adh-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.adh-fill{height:100%;border-radius:99px}
+.offline-banner{background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px var(--pad);font-size:12px;color:var(--warn);text-align:center;display:none}
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offline-banner">⚠️ Sem conexão — dados salvos localmente</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div style="padding:40px var(--pad) 24px;max-width:400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">🔍</div>
+      <h2 style="font-size:22px;font-weight:700">Auditoria 5S</h2>
+      <p style="font-size:13px;color:var(--text2);margin-top:6px">Cobeb — Gestão de Qualidade</p>
+    </div>
+    <div class="form-group"><label>CPF (somente números)</label><input type="tel" id="login-cpf" placeholder="00000000000" maxlength="11" inputmode="numeric"></div>
+    <div class="form-group"><label>Data de nascimento</label><input type="date" id="login-senha"></div>
+    <div id="login-error" style="display:none;color:var(--nok);font-size:13px;margin-bottom:10px;padding:8px 12px;background:var(--nok-bg);border-radius:6px"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar →</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="header">
+    <div class="header-top"><h1>Auditoria 5S</h1><button style="background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer" onclick="doLogout()">Sair</button></div>
+    <div class="header-sub" id="home-user">Supervisora</div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" onclick="goScreen('screen-setup')">
+      <div style="padding:14px var(--pad);display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:20px">🔍</div>
+        <div style="flex:1"><div style="font-weight:600">Nova Auditoria</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Iniciar checklist 5S por área</div></div>
+        <div style="color:var(--text3);font-size:18px">›</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" onclick="loadAndShowHistory()">
+      <div style="padding:14px var(--pad);display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+        <div style="flex:1"><div style="font-weight:600">Histórico de Auditorias</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Ver auditorias realizadas</div></div>
+        <div style="color:var(--text3);font-size:18px">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-home')">‹</button><h1>Nova Auditoria</h1><div style="width:36px"></div></div>
+  </div>
+  <div style="padding:16px">
+    <div class="form-group"><label>Armazém</label>
+      <select id="s-arm" onchange="loadAreaOwner()"><option value="">Selecionar...</option><option>Pará de Minas</option><option>Lagoa da Prata</option><option>Abaeté</option></select>
+    </div>
+    <div class="form-group"><label>Área auditada</label>
+      <select id="s-area" onchange="loadAreaOwner()">
+        <option value="">Selecionar...</option>
+        <option>Estoque Central</option><option>Área de Repack</option><option>Picking</option>
+        <option>Câmara Fria</option><option>Área de PNC</option><option>Área de Devolução</option>
+        <option>Área de Despejo</option><option>Pátio</option><option>Área de Sucata</option><option>Infraestrutura</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Dono do 5S (mês atual)</label>
+      <input type="text" id="s-owner" readonly style="background:var(--surface2);color:var(--accent);font-weight:500" placeholder="Selecione armazém e área">
+    </div>
+    <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="s-dt"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="goScreen('screen-home')">Cancelar</button>
+    <button class="btn btn-primary" onclick="startAudit()">Iniciar →</button>
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div id="screen-checklist" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-setup')">‹</button><h1 id="ck-area">Área</h1><div style="width:36px"></div></div>
+    <div class="header-sub" id="ck-sub"></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-info"><span id="prog-label">0 de 24</span><span id="prog-pct">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="senso-tabs" id="senso-tabs"></div>
+  <div style="padding:12px var(--pad)" id="senso-content"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="prevSenso()">‹ Ant.</button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextSenso()">Próximo →</button>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div id="screen-summary" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-checklist')">‹</button><h1>Resultado</h1><div style="width:36px"></div></div>
+  </div>
+  <div style="background:var(--surface);padding:24px var(--pad);border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <div style="font-size:52px;font-weight:700" id="sum-score">0%</div>
+      <div style="font-size:14px;color:var(--text2)">conformidade 5S</div>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-top:4px" id="sum-meta"></div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px" id="sum-sensos"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="goScreen('screen-home')">Início</button>
+    <button class="btn btn-success" id="btn-salvar" onclick="salvarAuditoria()">Finalizar e Salvar ✓</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="screen-history" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-home')">‹</button><h1>Histórico</h1></div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px" id="history-list"></div>
+</div>
+
+<script type="module">
+// ⚠️ COLE SUA CONFIGURAÇÃO FIREBASE AQUI
+const firebaseConfig = {
+  apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
+  authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
+  projectId: "controle-de-qualidade-armazem",
+  storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
+  messagingSenderId: "76797503134",
+  appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+};
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.addEventListener('online',()=>document.getElementById('offline-banner').style.display='none');
+window.addEventListener('offline',()=>document.getElementById('offline-banner').style.display='block');
+
+const SENSOS = [
+  {id:'selecao',label:'1 — Seleção',color:'#6d28d9',items:['A área está livre de equipamentos/objetos quebrados ou sem utilização?','A área está livre de cópias desnecessárias (padrões vencidos, books sem uso)?','A área está livre de objetos desnecessários em armários e gavetas?','Objetos pessoais estão nos lugares corretos? (Não devem estar nos postos de trabalho)']},
+  {id:'organizacao',label:'2 — Organização',color:'#1a56db',items:['Existe identificação de materiais (mesas, salas, cadeiras, armários)?','Os padrões da área estão em local de fácil acesso, conhecidos por todos?','Os itens da área estão nos seus locais destinados com placas/identificações?','Materiais de uso frequente estão próximos ao ponto de uso e identificados?']},
+  {id:'limpeza',label:'3 — Limpeza',color:'#0f766e',items:['Existe cronograma de limpeza na área? Está sendo cumprido?','O lixo é recolhido com frequência adequada?','O piso está limpo e livre de resíduos, manchas e poeira?','De modo geral a área passa a impressão de ambiente limpo?','A área está livre de alimentos ou restos de alimentos?']},
+  {id:'conservacao',label:'4 — Conservação',color:'#b45309',items:['Equipamentos, utensílios e materiais estão em bom estado de conservação?','As luminárias estão funcionando e em bom estado?','Não há cabos soltos pela área?','O piso, paredes e teto estão em bom estado (sem buracos, manchas, teias)?','Tomadas e interruptores estão em bom estado e funcionando?']},
+  {id:'autodisciplina',label:'5 — Auto Disciplina',color:'#be123c',items:['O operador conhece sua responsabilidade e sabe explicar o quadro 5S?','Existe quadro de gestão à vista com resultado da última auditoria atualizado?','Todos os quadros de gestão à vista estão preenchidos e atualizados?','Não conformidades de auditorias anteriores foram tratadas?','Ações da última auditoria estão escritas no quadro e atualizadas?','Foram cumpridos 80%+ dos itens dos primeiros 4 sensos?']}
+];
+
+let st = {user:null,profile:null,area:'',arm:'',owner:'',dt:'',currentSenso:0,answers:{},comments:{},photos:{}};
+
+onAuthStateChanged(auth, async user=>{
+  if(user){
+    const snap=await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
+    if(snap.exists()){st.user=user;st.profile=snap.data();document.getElementById('home-user').textContent=`${st.profile.nome} — Supervisora`;goScreen('screen-home');}
+  } else goScreen('screen-login');
+});
+
+window.doLogin=async function(){
+  const cpf=document.getElementById('login-cpf').value.trim();
+  const dt=document.getElementById('login-senha').value;
+  if(!cpf||!dt){showErr('Preencha CPF e data de nascimento.');return;}
+  try{const [y,m,d]=dt.split('-');await signInWithEmailAndPassword(auth,`${cpf}@cobeb.com`,`${d}${m}${y}`);}
+  catch(e){showErr('CPF ou data incorretos.');}
+};
+function showErr(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block';}
+window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
+function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+
+window.loadAreaOwner=async function(){
+  const arm=document.getElementById('s-arm').value;
+  const area=document.getElementById('s-area').value;
+  if(!arm||!area){document.getElementById('s-owner').value='';return;}
+  const mk=new Date().toISOString().slice(0,7);
+  try{
+    const snap=await getDoc(doc(db,'armazens',arm,'donos_area',mk));
+    const data=snap.data()||{};
+    document.getElementById('s-owner').value=data[area]||'(não definido)';
+  }catch(e){document.getElementById('s-owner').value='(não definido)';}
+};
+
+window.startAudit=function(){
+  const arm=document.getElementById('s-arm').value;
+  const area=document.getElementById('s-area').value;
+  const dt=document.getElementById('s-dt').value;
+  if(!arm||!area){alert('Selecione armazém e área.');return;}
+  st.arm=arm;st.area=area;st.owner=document.getElementById('s-owner').value;
+  st.dt=dt||new Date().toISOString().slice(0,16);
+  st.currentSenso=0;st.answers={};st.comments={};st.photos={};
+  document.getElementById('ck-area').textContent=area;
+  document.getElementById('ck-sub').textContent=`${arm} · Dono: ${st.owner}`;
+  buildSensoTabs();renderSenso(0);goScreen('screen-checklist');
+};
+
+function buildSensoTabs(){
+  document.getElementById('senso-tabs').innerHTML=SENSOS.map((s,i)=>`<div class="senso-tab${i===0?' active':''}" id="stab-${i}" onclick="jumpSenso(${i})">${s.label}</div>`).join('');
+}
+
+function renderSenso(idx){
+  st.currentSenso=idx;
+  document.querySelectorAll('.senso-tab').forEach((t,i)=>{t.classList.toggle('active',i===idx);t.classList.toggle('done',isSensoDone(i)&&i!==idx);});
+  const senso=SENSOS[idx];
+  document.getElementById('senso-content').innerHTML=senso.items.map((q,qi)=>{
+    const key=`${senso.id}-${qi}`;const ans=st.answers[key]||'';
+    return `<div class="check-item">
+      <div class="check-question"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:#f5f3ff;color:${senso.color};margin-bottom:6px;display:inline-block">${senso.label}</span><br>${qi+1}. ${q}</div>
+      <div class="check-options">
+        <button class="check-btn ok${ans==='ok'?' selected':''}" onclick="setAns('${key}','ok',this)">✓ OK</button>
+        <button class="check-btn nok${ans==='nok'?' selected':''}" onclick="setAns('${key}','nok',this)">✗ NOK</button>
+        <button class="check-btn na${ans==='na'?' selected':''}" onclick="setAns('${key}','na',this)">N/A</button>
+      </div>
+      <div class="check-expand${ans?' open':''}" id="ce-${key}">
+        <input type="text" placeholder="Comentário (opcional)" value="${st.comments[key]||''}" oninput="st.comments['${key}']=this.value">
+        <label class="photo-btn" for="ph-${key}">📷 Adicionar foto</label>
+        <input type="file" id="ph-${key}" accept="image/*" capture="environment" multiple onchange="handlePhoto('${key}',this)">
+        <div class="photo-thumbs" id="th-${key}"></div>
+      </div>
+    </div>`;
+  }).join('');
+  updateProgress();
+  document.getElementById('btn-next').textContent=idx===SENSOS.length-1?'Ver Resultado →':'Próximo →';
+  document.getElementById('senso-tabs').scrollTo({left:idx*110,behavior:'smooth'});
+}
+
+window.setAns=function(key,val,btn){
+  st.answers[key]=val;
+  const item=btn.closest('.check-item');
+  item.querySelectorAll('.check-btn').forEach(b=>{b.classList.remove('selected');if(b===btn)b.classList.add('selected');});
+  document.getElementById(`ce-${key}`).classList.add('open');
+  updateProgress();
+};
+window.handlePhoto=function(key,input){
+  if(!st.photos[key])st.photos[key]=[];
+  const thumbs=document.getElementById(`th-${key}`);
+  Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{st.photos[key].push(e.target.result);thumbs.innerHTML+=`<img class="photo-thumb" src="${e.target.result}">`;};r.readAsDataURL(f);});
+};
+function isSensoDone(idx){return SENSOS[idx].items.every((_,qi)=>st.answers[`${SENSOS[idx].id}-${qi}`]);}
+function updateProgress(){
+  const total=SENSOS.reduce((s,se)=>s+se.items.length,0);
+  const answered=Object.keys(st.answers).length;
+  const pct=Math.round((answered/total)*100);
+  document.getElementById('prog-label').textContent=`${answered} de ${total}`;
+  document.getElementById('prog-pct').textContent=`${pct}%`;
+  document.getElementById('prog-fill').style.width=`${pct}%`;
+}
+window.nextSenso=function(){if(st.currentSenso<SENSOS.length-1){renderSenso(st.currentSenso+1);window.scrollTo(0,0);}else showSummary();};
+window.prevSenso=function(){if(st.currentSenso>0){renderSenso(st.currentSenso-1);window.scrollTo(0,0);}};
+window.jumpSenso=function(idx){renderSenso(idx);window.scrollTo(0,0);};
+
+function showSummary(){
+  let totalOk=0,totalAns=0;
+  const sensoRes=SENSOS.map(se=>{
+    let ok=0,nok=0,na=0;
+    se.items.forEach((_,qi)=>{const ans=st.answers[`${se.id}-${qi}`];if(ans==='ok')ok++;else if(ans==='nok')nok++;else if(ans==='na')na++;});
+    const valid=ok+nok;const pct=valid>0?Math.round((ok/valid)*100):null;
+    totalOk+=ok;totalAns+=(ok+nok);
+    return{...se,ok,nok,na,pct};
+  });
+  const overall=totalAns>0?Math.round((totalOk/totalAns)*100):0;
+  st._overall=overall;st._sensoRes=sensoRes;
+  const sc=document.getElementById('sum-score');
+  sc.textContent=overall+'%';sc.style.color=overall>=80?'var(--ok)':overall>=60?'var(--warn)':'var(--nok)';
+  document.getElementById('sum-meta').textContent=`${st.area} · ${st.arm} · Dono: ${st.owner}`;
+  document.getElementById('sum-sensos').innerHTML=sensoRes.map(r=>{
+    const c=r.pct===null?'#888':r.pct>=80?'var(--ok)':r.pct>=60?'var(--warn)':'var(--nok)';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><span style="font-weight:600;font-size:14px;color:${r.color}">${r.label}</span><span style="font-weight:700;color:${c}">${r.pct!==null?r.pct+'%':'—'}</span></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">✓ ${r.ok} OK · ✗ ${r.nok} NOK · N/A ${r.na}</div>
+      <div class="adh-bar"><div class="adh-fill" style="width:${r.pct||0}%;background:${c}"></div></div>
+    </div>`;
+  }).join('');
+  goScreen('screen-summary');
+}
+
+window.salvarAuditoria=async function(){
+  const btn=document.getElementById('btn-salvar');btn.textContent='Salvando...';btn.disabled=true;
+  try{
+    await addDoc(collection(db,'armazens',st.arm,'auditorias_5s'),{
+      area:st.area,owner:st.owner,auditora:st.profile?.nome||'Supervisora',
+      datetime:st.dt,overall:st._overall,
+      sensoResults:st._sensoRes.map(r=>({label:r.label,ok:r.ok,nok:r.nok,na:r.na,pct:r.pct})),
+      timestamp:serverTimestamp()
+    });
+    alert('Auditoria salva com sucesso! ✓');
+    goScreen('screen-home');
+  }catch(e){alert('Erro ao salvar. Verifique a conexão.');}
+  btn.textContent='Finalizar e Salvar ✓';btn.disabled=false;
+};
+
+window.loadAndShowHistory=async function(){
+  goScreen('screen-history');
+  const arm=document.getElementById('s-arm')?.value||'Pará de Minas';
+  const list=document.getElementById('history-list');
+  list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Carregando...</div>';
+  try{
+    const snap=await getDocs(query(collection(db,'armazens',arm,'auditorias_5s'),orderBy('timestamp','desc')));
+    if(!snap.docs.length){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma auditoria registrada</div>';return;}
+    list.innerHTML=snap.docs.map(d=>{
+      const a=d.data();const c=a.overall>=80?'var(--ok)':a.overall>=60?'var(--warn)':'var(--nok)';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div><div style="font-weight:600;font-size:14px">${a.area}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${a.arm||arm} · 👤 ${a.owner}</div></div>
+          <div style="font-size:22px;font-weight:700;color:${c}">${a.overall}%</div>
+        </div>
+        <div class="adh-bar"><div class="adh-fill" style="width:${a.overall}%;background:${c}"></div></div>
+      </div>`;
+    }).join('');
+  }catch(e){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Erro ao carregar</div>';}
+};
+
+document.getElementById('s-dt').value=new Date().toISOString().slice(0,16);
+</script>
+</body>
+</html>

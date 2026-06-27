@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a1a18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ronda Qualidade">
+<title>Ronda de Qualidade — Cobeb</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f4f0;--surface:#fff;--surface2:#f8f8f5;
+  --border:#e0dfd8;--border-strong:#c8c7be;
+  --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a92;
+  --accent:#1a56db;--accent-bg:#eef3fd;--accent-border:#93b4f5;
+  --ok:#16a34a;--ok-bg:#f0fdf4;--ok-border:#86efac;
+  --warn:#ca8a04;--warn-bg:#fefce8;
+  --nok:#dc2626;--nok-bg:#fef2f2;--nok-border:#fca5a5;
+  --na:#92400e;--na-bg:#fffbeb;--na-border:#fcd34d;
+  --radius:10px;--pad:16px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;min-height:100vh;padding-bottom:80px}
+.screen{display:none}.screen.active{display:block}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px var(--pad);position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.header h1{font-size:17px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3)}
+.btn-back{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);padding:0 8px 0 0}
+.btn{padding:11px 16px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;width:100%}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+.btn-success{background:var(--ok);color:#fff}
+.btn-sm{padding:7px 12px;font-size:13px;width:auto;border-radius:6px}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px var(--pad);display:flex;gap:10px;z-index:100}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.form-group select,.form-group input,.form-group textarea{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font-size:15px;background:var(--surface);color:var(--text);outline:none;appearance:none}
+.form-group textarea{resize:vertical;min-height:72px;font-family:inherit}
+.progress-wrap{background:var(--surface);padding:10px var(--pad);border-bottom:1px solid var(--border);position:sticky;top:57px;z-index:90}
+.progress-info{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;color:var(--text2)}
+.progress-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width 0.3s}
+.area-tabs{display:flex;overflow-x:auto;gap:6px;padding:10px var(--pad);background:var(--surface2);border-bottom:1px solid var(--border);scrollbar-width:none}
+.area-tabs::-webkit-scrollbar{display:none}
+.area-tab{flex-shrink:0;padding:5px 12px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);white-space:nowrap}
+.area-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.area-tab.done{border-color:var(--ok-border);background:var(--ok-bg);color:var(--ok)}
+.check-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.check-question{padding:12px;font-size:14px;line-height:1.4}
+.check-options{display:flex;border-top:1px solid var(--border)}
+.check-btn{flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:var(--text3);transition:all 0.15s}
+.check-btn:not(:last-child){border-right:1px solid var(--border)}
+.check-btn.ok.selected{background:var(--ok-bg);color:var(--ok)}
+.check-btn.nok.selected{background:var(--nok-bg);color:var(--nok)}
+.check-btn.na.selected{background:var(--na-bg);color:var(--na)}
+.check-expand{padding:0 12px 10px;display:none}
+.check-expand.open{display:block;padding-top:8px}
+.check-expand input{width:100%;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:13px;outline:none;background:var(--surface2)}
+.photo-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px dashed var(--border-strong);border-radius:6px;background:var(--surface2);cursor:pointer;font-size:13px;color:var(--text2);width:100%;margin-top:6px}
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.photo-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.task-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--nok-border);border-radius:6px;background:var(--nok-bg);cursor:pointer;font-size:13px;color:var(--nok);width:100%;margin-top:6px}
+input[type=file]{display:none}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;padding:20px var(--pad) 32px;width:100%;max-height:88vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border-strong);border-radius:99px;margin:0 auto 16px}
+.exec-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:6px}
+.exec-item.selected{border-color:var(--accent-border);background:var(--accent-bg)}
+.exec-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0}
+.summary-score{font-size:52px;font-weight:700;line-height:1}
+.adh-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.adh-fill{height:100%;border-radius:99px}
+.offline-banner{background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px var(--pad);font-size:12px;color:var(--warn);text-align:center;display:none}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offline-banner">⚠️ Sem conexão — dados salvos localmente</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div style="padding:40px var(--pad) 24px;max-width:400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">📋</div>
+      <h2 style="font-size:22px;font-weight:700">Ronda de Qualidade</h2>
+      <p style="font-size:13px;color:var(--text2);margin-top:6px">Cobeb — Gestão de Qualidade</p>
+    </div>
+    <div class="form-group"><label>CPF (somente números)</label><input type="tel" id="login-cpf" placeholder="00000000000" maxlength="11" inputmode="numeric"></div>
+    <div class="form-group"><label>Data de nascimento</label><input type="date" id="login-senha"></div>
+    <div id="login-error" style="display:none;color:var(--nok);font-size:13px;margin-bottom:10px;padding:8px 12px;background:var(--nok-bg);border-radius:6px"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar →</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="header">
+    <div class="header-top"><h1>Ronda de Qualidade</h1><button style="background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer" onclick="doLogout()">Sair</button></div>
+    <div class="header-sub" id="home-sub">Talita Gabriela — Supervisora</div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" onclick="goScreen('screen-setup')">
+      <div style="padding:14px var(--pad);display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:20px">📋</div>
+        <div style="flex:1"><div style="font-weight:600">Nova Ronda</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Iniciar checklist de inspeção</div></div>
+        <div style="color:var(--text3);font-size:18px">›</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer" onclick="goScreen('screen-history')">
+      <div style="padding:14px var(--pad);display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;font-size:20px">📊</div>
+        <div style="flex:1"><div style="font-weight:600">Histórico de Rondas</div><div style="font-size:12px;color:var(--text2);margin-top:2px">Ver rondas anteriores</div></div>
+        <div style="color:var(--text3);font-size:18px">›</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-home')">‹</button><h1>Nova Ronda</h1><div style="width:36px"></div></div>
+  </div>
+  <div style="padding:16px">
+    <div class="form-group"><label>Armazém</label>
+      <select id="setup-arm"><option value="">Selecionar...</option><option>Pará de Minas</option><option>Lagoa da Prata</option><option>Abaeté</option></select>
+    </div>
+    <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="setup-dt"></div>
+    <div class="form-group"><label>Observações iniciais</label><textarea placeholder="Condições gerais, turno..."></textarea></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="goScreen('screen-home')">Cancelar</button>
+    <button class="btn btn-primary" onclick="startRonda()">Iniciar →</button>
+  </div>
+</div>
+
+<!-- CHECKLIST -->
+<div id="screen-checklist" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-setup')">‹</button><h1 id="ck-arm">Armazém</h1><div style="width:36px"></div></div>
+    <div class="header-sub" id="ck-sub"></div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-info"><span id="prog-label">0 de 49</span><span id="prog-pct">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="area-tabs" id="area-tabs"></div>
+  <div style="padding:12px var(--pad)" id="checklist-content"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="prevArea()">‹ Ant.</button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextArea()">Próxima →</button>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div id="screen-summary" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-checklist')">‹</button><h1>Resultado</h1><div style="width:36px"></div></div>
+  </div>
+  <div style="background:var(--surface);padding:24px var(--pad);border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <div class="summary-score" id="sum-score">0%</div>
+      <div style="font-size:14px;color:var(--text2)">conformidade</div>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-top:4px" id="sum-meta"></div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px" id="sum-areas"></div>
+  <div style="padding:0 var(--pad) 80px" id="sum-tasks"></div>
+  <div class="bottom-bar">
+    <button class="btn btn-secondary" onclick="goScreen('screen-home')">Início</button>
+    <button class="btn btn-success" id="btn-finalizar" onclick="finalizarRonda()">Finalizar e Salvar ✓</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="screen-history" class="screen">
+  <div class="header">
+    <div class="header-top"><button class="btn-back" onclick="goScreen('screen-home')">‹</button><h1>Histórico</h1></div>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;gap:8px" id="history-list">
+    <div style="text-align:center;padding:32px;color:var(--text3)"><div class="spinner" style="margin-bottom:12px"></div>Carregando...</div>
+  </div>
+</div>
+
+<!-- MODAL TAREFA -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:17px;font-weight:600;margin-bottom:12px">Criar Tarefa</h3>
+    <div id="modal-task-q" style="font-size:14px;color:var(--text2);padding:8px 12px;background:var(--nok-bg);border-radius:6px;border:1px solid var(--nok-border);margin-bottom:14px"></div>
+    <div class="form-group"><label>Descrição da tarefa</label><textarea id="task-desc" placeholder="O que deve ser feito..."></textarea></div>
+    <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:8px">Atribuir para</div>
+    <div id="exec-list" style="max-height:200px;overflow-y:auto"></div>
+    <div class="form-group" style="margin-top:12px"><label>Prazo</label><input type="date" id="task-prazo"></div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="saveTask()">Salvar Tarefa ✓</button>
+  </div>
+</div>
+
+<script type="module">
+// ⚠️ COLE SUA CONFIGURAÇÃO FIREBASE AQUI
+const firebaseConfig = {
+  apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
+  authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
+  projectId: "controle-de-qualidade-armazem",
+  storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
+  messagingSenderId: "76797503134",
+  appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+};
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, collection, addDoc, getDocs, query, orderBy, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+window.addEventListener('online', ()=>document.getElementById('offline-banner').style.display='none');
+window.addEventListener('offline', ()=>document.getElementById('offline-banner').style.display='block');
+
+const AREAS = [
+  {id:'repack',name:'Repack',icon:'📦',items:['A área de Repack está limpa e organizada?','Todos os produtos reembalados usam embalagem proprietária correta?','Produtos reembalados com mesma produção (lote, código, idade, integridade)?','Unidades nas prateleiras dentro da validade e segregadas por data?','Produtos livres de sujeira (poeira, vazamento, resíduos)?','Materiais de reembalagem suficientes e conservados?']},
+  {id:'camara',name:'Câmara Fria',icon:'🍺',items:['Barris armazenados na câmara fria e temperatura entre 2°C e 7°C?','Barris seguindo FEFO e todos identificados?','Há barris com vencimento menor que o prazo de comercialização?','Barris devolvidos/com problema em área reservada e travados?']},
+  {id:'estoque',name:'Estoque Central',icon:'🏭',items:['Há produtos expostos à luz solar?','Temperatura entre 3°C e 25°C e quadros preenchidos?','Há paletes sem identificação de NRI eletrônica?','Avarias com identificação de selo vermelho?','Palete com micro furo ou vazamento?','Palete com embalagens faltantes?','Palete com problema de filmagem?','Paletes empilhados dentro dos limites (PTL)?','Paletes com proteção de chapatex/folha separadora?','Produtos em paletes danificados?','Lotes alinhados e dentro do espaço delimitado?','Lotes adernados ou inclinados por falha de empilhamento?']},
+  {id:'picking',name:'Picking',icon:'🛒',items:['Produto com poeira no picking, regulador ou rack?','Palete no regulador fora de lote?','Desvio de FEFO (amostra de SKU com idade crítica)?','Reposição no picking de acordo com o padrão?']},
+  {id:'pnc',name:'PNC',icon:'🚫',items:['PNCs segregados do restante do estoque?','PNCs em área adequada (protegidos, cercados, quadros atualizados)?','Área sem grade: paletes com trava, corrente e cadeado?']},
+  {id:'devolucao',name:'Devolução',icon:'🔄',items:['Área de devolução do retorno de rota limpa e organizada?','Quebras do retorno de rota realizadas?']},
+  {id:'despejo',name:'Despejo',icon:'🚿',items:['Há produtos a serem despejados fora da área designada?','A área está limpa e sem resíduos no piso?','O padrão de despejo está fixado e visível?','A bombona está em nível adequado para operação?','EPIs para despejo disponíveis e em boas condições?','Há registro/controle das bombonas despejadas no turno?']},
+  {id:'patio',name:'Pátio',icon:'🏗️',items:['O pátio está limpo e sem insumos jogados?','Há veículos fora dos locais de parada demarcados?','Há veículos parados fora das docas?','A sinalização do pátio está íntegra e visível?','Há pessoas não autorizadas ou sem EPI no pátio?']},
+  {id:'sucata',name:'Sucata',icon:'♻️',items:['A área de sucata está limpa e organizada?','Todos os materiais em seus respectivos locais e identificados?','Tambores de cacos de vidro em nível adequado?','Bags posicionados nos locais corretos e organizados?','Bags de latas e PETs em nível adequado, sem superlotação?','Bags e tambores identificados por tipo de material?','Há materiais misturados no mesmo recipiente?']},
+  {id:'infra',name:'Infraestrutura',icon:'⚙️',items:['Iscas do controle de pragas em boas condições (fixas conforme mapa)?','Empilhadeiras com proteções de grade em boas condições?']}
+];
+
+const USERS_BY_ARM = {
+  'Pará de Minas':['Matheuzão','Leandrinho','Leandro Alves','Matheus','Manoel','Geliton','Gedofredo'],
+  'Lagoa da Prata':['Joelcio','Pedro','Anderson','Bruninho','Vitor','Alisson','Sergio','Rafael','Erick','Renato','Vicente','José Pires'],
+  'Abaeté':['Rafael','Rodrigo','Edimar','Anderson']
+};
+
+let st = {user:null,profile:null,arm:'',dt:'',currentArea:0,answers:{},comments:{},photos:{},tasks:[],pendingKey:null,selExec:null,rondaId:null};
+
+onAuthStateChanged(auth, async user => {
+  if(user) {
+    const {getDoc} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const snap = await getDoc(doc(db,'usuarios',user.email.split('@')[0]));
+    if(snap.exists()){ st.user=user; st.profile=snap.data(); document.getElementById('home-sub').textContent=`${st.profile.nome} — Supervisora`; goScreen('screen-home'); loadHistory(); }
+  } else goScreen('screen-login');
+});
+
+window.doLogin = async function(){
+  const cpf=document.getElementById('login-cpf').value.trim();
+  const dt=document.getElementById('login-senha').value;
+  if(!cpf||cpf.length<11||!dt){showErr('Preencha CPF e data de nascimento.');return;}
+  try{
+    const [y,m,d]=dt.split('-');
+    await signInWithEmailAndPassword(auth,`${cpf}@cobeb.com`,`${d}${m}${y}`);
+  }catch(e){showErr('CPF ou data de nascimento incorretos.');}
+};
+function showErr(msg){const el=document.getElementById('login-error');el.textContent=msg;el.style.display='block';}
+window.doLogout=async()=>{await signOut(auth);goScreen('screen-login');};
+
+function goScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
+
+window.startRonda=function(){
+  const arm=document.getElementById('setup-arm').value;
+  const dt=document.getElementById('setup-dt').value;
+  if(!arm){alert('Selecione um armazém.');return;}
+  st.arm=arm; st.dt=dt||new Date().toISOString().slice(0,16);
+  st.currentArea=0; st.answers={}; st.comments={}; st.photos={}; st.tasks=[];
+  document.getElementById('ck-arm').textContent=arm;
+  document.getElementById('ck-sub').textContent=new Date(st.dt).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+  buildTabs(); renderArea(0); goScreen('screen-checklist');
+};
+
+function buildTabs(){
+  document.getElementById('area-tabs').innerHTML=AREAS.map((a,i)=>`<div class="area-tab${i===0?' active':''}" id="atab-${i}" onclick="jumpArea(${i})">${a.icon} ${a.name}</div>`).join('');
+}
+
+function renderArea(idx){
+  st.currentArea=idx;
+  document.querySelectorAll('.area-tab').forEach((t,i)=>{t.classList.toggle('active',i===idx);t.classList.toggle('done',isAreaDone(i)&&i!==idx);});
+  const area=AREAS[idx];
+  document.getElementById('checklist-content').innerHTML=`<div style="padding:10px 0 6px;font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">${area.icon} ${area.name}</div>`+
+    area.items.map((q,qi)=>{
+      const key=`${area.id}-${qi}`;const ans=st.answers[key]||'';
+      return `<div class="check-item" id="ci-${key}">
+        <div class="check-question">${qi+1}. ${q}</div>
+        <div class="check-options">
+          <button class="check-btn ok${ans==='ok'?' selected':''}" onclick="setAns('${key}','ok',this)">✓ OK</button>
+          <button class="check-btn nok${ans==='nok'?' selected':''}" onclick="setAns('${key}','nok',this)">✗ NOK</button>
+          <button class="check-btn na${ans==='na'?' selected':''}" onclick="setAns('${key}','na',this)">N/A</button>
+        </div>
+        <div class="check-expand${ans?' open':''}" id="ce-${key}">
+          <input type="text" placeholder="Comentário (opcional)" value="${st.comments[key]||''}" oninput="st.comments['${key}']=this.value">
+          <label class="photo-btn" for="ph-${key}">📷 Adicionar foto</label>
+          <input type="file" id="ph-${key}" accept="image/*" capture="environment" multiple onchange="handlePhoto('${key}',this)">
+          <div class="photo-thumbs" id="th-${key}"></div>
+          ${ans==='nok'?`<button class="task-btn" onclick="openTaskModal('${key}','${q.replace(/'/g,"\\'")}')">⚡ Criar tarefa</button>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  updateProgress();
+  document.getElementById('btn-next').textContent=idx===AREAS.length-1?'Ver Resultado →':'Próxima →';
+  document.getElementById('area-tabs').scrollTo({left:idx*90,behavior:'smooth'});
+}
+
+window.setAns=function(key,val,btn){
+  st.answers[key]=val;
+  const item=document.getElementById(`ci-${key}`);
+  item.querySelectorAll('.check-btn').forEach(b=>{b.classList.remove('selected');if(b===btn)b.classList.add('selected');});
+  const exp=document.getElementById(`ce-${key}`); exp.classList.add('open');
+  // Rerender task btn
+  const existing=exp.querySelector('.task-btn');if(existing)existing.remove();
+  if(val==='nok'){
+    const tb=document.createElement('button'); tb.className='task-btn';
+    const q=item.querySelector('.check-question').textContent.replace(/^\d+\.\s*/,'');
+    tb.innerHTML='⚡ Criar tarefa'; tb.onclick=()=>openTaskModal(key,q);
+    exp.appendChild(tb);
+  }
+  updateProgress();
+};
+
+window.handlePhoto=function(key,input){
+  if(!st.photos[key])st.photos[key]=[];
+  const thumbs=document.getElementById(`th-${key}`);
+  Array.from(input.files).forEach(f=>{const r=new FileReader();r.onload=e=>{st.photos[key].push(e.target.result);thumbs.innerHTML+=`<img class="photo-thumb" src="${e.target.result}">`;};r.readAsDataURL(f);});
+};
+
+function isAreaDone(idx){return AREAS[idx].items.every((_,qi)=>st.answers[`${AREAS[idx].id}-${qi}`]);}
+function updateProgress(){
+  const total=AREAS.reduce((s,a)=>s+a.items.length,0);
+  const answered=Object.keys(st.answers).length;
+  const pct=Math.round((answered/total)*100);
+  document.getElementById('prog-label').textContent=`${answered} de ${total}`;
+  document.getElementById('prog-pct').textContent=`${pct}%`;
+  document.getElementById('prog-fill').style.width=`${pct}%`;
+}
+window.nextArea=function(){if(st.currentArea<AREAS.length-1){renderArea(st.currentArea+1);window.scrollTo(0,0);}else showSummary();};
+window.prevArea=function(){if(st.currentArea>0){renderArea(st.currentArea-1);window.scrollTo(0,0);}};
+window.jumpArea=function(idx){renderArea(idx);window.scrollTo(0,0);};
+
+function showSummary(){
+  let totalOk=0,totalAns=0;
+  const areaRes=AREAS.map(area=>{
+    let ok=0,nok=0,na=0;
+    area.items.forEach((_,qi)=>{const ans=st.answers[`${area.id}-${qi}`];if(ans==='ok')ok++;else if(ans==='nok')nok++;else if(ans==='na')na++;});
+    const valid=ok+nok; const pct=valid>0?Math.round((ok/valid)*100):null;
+    totalOk+=ok;totalAns+=(ok+nok);
+    return{...area,ok,nok,na,pct};
+  });
+  const overall=totalAns>0?Math.round((totalOk/totalAns)*100):0;
+  st._overall=overall;st._areaRes=areaRes;
+  const sc=document.getElementById('sum-score');
+  sc.textContent=overall+'%';sc.style.color=overall>=80?'var(--ok)':overall>=60?'var(--warn)':'var(--nok)';
+  document.getElementById('sum-meta').textContent=`${st.arm} · ${new Date(st.dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+  document.getElementById('sum-areas').innerHTML=areaRes.map(r=>{
+    const c=r.pct===null?'#888':r.pct>=80?'var(--ok)':r.pct>=60?'var(--warn)':'var(--nok)';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:600;font-size:14px">${r.icon} ${r.name}</span><span style="font-weight:700;color:${c}">${r.pct!==null?r.pct+'%':'—'}</span></div>
+      <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:${r.pct||0}%;height:100%;background:${c};border-radius:99px"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('sum-tasks').innerHTML=st.tasks.length>0
+    ?`<div style="padding:14px 0 8px;font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">${st.tasks.length} Tarefa(s) criada(s)</div>`+
+      st.tasks.map(t=>`<div style="background:var(--nok-bg);border:1px solid var(--nok-border);border-radius:var(--radius);padding:12px;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--nok);margin-bottom:4px">NOK · ${t.area}</div>
+        <div style="font-size:13px">${t.desc||t.question}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">👤 ${t.executor||'—'} · 📅 ${t.prazo||'—'}</div>
+      </div>`).join(''):'';
+  goScreen('screen-summary');
+}
+
+window.openTaskModal=function(key,question){
+  st.pendingKey=key;st.selExec=null;
+  const [areaId]=key.split('-');const area=AREAS.find(a=>a.id===areaId);
+  document.getElementById('modal-task-q').textContent=question||key;
+  document.getElementById('task-desc').value='';
+  const users=USERS_BY_ARM[st.arm]||[];
+  document.getElementById('exec-list').innerHTML=users.map(u=>`
+    <div class="exec-item" onclick="selExec(this,'${u}')">
+      <div class="exec-avatar">${u[0]}</div>
+      <div><div style="font-size:14px;font-weight:500">${u}</div><div style="font-size:11px;color:var(--text3)">${st.arm}</div></div>
+    </div>`).join('');
+  document.getElementById('modal-task').classList.add('open');
+};
+window.selExec=function(el,name){st.selExec=name;document.querySelectorAll('.exec-item').forEach(e=>{e.classList.toggle('selected',e===el);});};
+window.saveTask=function(){
+  const key=st.pendingKey;
+  const [areaId]=key.split('-');const area=AREAS.find(a=>a.id===areaId);
+  st.tasks.push({key,area:area?.name||areaId,question:document.getElementById('modal-task-q').textContent,desc:document.getElementById('task-desc').value,executor:st.selExec,prazo:document.getElementById('task-prazo').value,status:'aberta'});
+  document.getElementById('modal-task').classList.remove('open');
+};
+
+window.finalizarRonda=async function(){
+  const btn=document.getElementById('btn-finalizar');
+  btn.textContent='Salvando...';btn.disabled=true;
+  try {
+    const arm=st.arm;
+    // Salva ronda no Firestore
+    const rondaRef=await addDoc(collection(db,'armazens',arm,'rondas'),{
+      datetime:st.dt,auditora:st.profile?.nome||'Talita',
+      overall:st._overall,nok:Object.values(st.answers).filter(a=>a==='nok').length,
+      timestamp:serverTimestamp()
+    });
+    // Salva tarefas
+    for(const t of st.tasks){
+      await addDoc(collection(db,'armazens',arm,'tarefas'),{
+        desc:t.desc||t.question,area:t.area,executor:t.executor||'',prazo:t.prazo||'',
+        status:'aberta',tipo:'ronda',rondaId:rondaRef.id,timestamp:serverTimestamp()
+      });
+    }
+    // Upload fotos (simplificado)
+    await loadHistory();
+    alert('Ronda finalizada e salva! ✓');
+    goScreen('screen-home');
+  } catch(e) {
+    console.error(e);
+    alert('Erro ao salvar. Verifique a conexão.');
+  }
+  btn.textContent='Finalizar e Salvar ✓';btn.disabled=false;
+};
+
+async function loadHistory(){
+  const arm=document.getElementById('setup-arm')?.value||'Pará de Minas';
+  const list=document.getElementById('history-list');
+  try {
+    const snap=await getDocs(query(collection(db,'armazens',arm,'rondas'),orderBy('timestamp','desc')));
+    if(!snap.docs.length){list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Nenhuma ronda registrada ainda</div>';return;}
+    list.innerHTML=snap.docs.map(d=>{
+      const r=d.data();const c=r.overall>=80?'var(--ok)':r.overall>=60?'var(--warn)':'var(--nok)';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px var(--pad)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div><div style="font-weight:600;font-size:14px">${r.auditora}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${r.datetime?new Date(r.datetime).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'}):''}</div></div>
+          <div style="font-size:22px;font-weight:700;color:${c}">${r.overall||0}%</div>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div style="width:${r.overall||0}%;height:100%;background:${c};border-radius:99px"></div></div>
+      </div>`;
+    }).join('');
+  } catch(e) { list.innerHTML='<div style="text-align:center;padding:32px;color:var(--text3)">Erro ao carregar histórico</div>'; }
+}
+
+document.getElementById('setup-dt').value=new Date().toISOString().slice(0,16);
+</script>
+</body>
+</html>

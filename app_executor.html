@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a1a18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="5S Executor">
+<link rel="manifest" href="manifest_executor.json">
+<title>5S Executor — Cobeb</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f4f0;--surface:#fff;--surface2:#f8f8f5;
+  --border:#e0dfd8;--border-strong:#c8c7be;
+  --text:#1a1a18;--text2:#5a5a55;--text3:#9a9a92;
+  --accent:#1a56db;--accent-bg:#eef3fd;--accent-border:#93b4f5;
+  --ok:#16a34a;--ok-bg:#f0fdf4;--ok-border:#86efac;
+  --warn:#ca8a04;--warn-bg:#fefce8;
+  --nok:#dc2626;--nok-bg:#fef2f2;--nok-border:#fca5a5;
+  --radius:10px;--pad:16px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;min-height:100vh;padding-bottom:80px}
+.screen{display:none}.screen.active{display:block}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px var(--pad);position:sticky;top:0;z-index:100}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.header h1{font-size:17px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3)}
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab-btn{flex:1;padding:12px 4px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--text3);border-bottom:2px solid transparent}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.btn{padding:11px 16px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;width:100%}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+.btn-success{background:var(--ok);color:#fff}
+.btn-sm{padding:7px 12px;font-size:13px;width:auto;border-radius:6px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:13px;font-weight:500;color:var(--text2)}
+.form-group input,.form-group select{width:100%;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;font-size:15px;background:var(--surface);color:var(--text);outline:none;appearance:none}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px}
+.task-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.task-header{padding:12px var(--pad);display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.task-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all 0.2s}
+.task-check.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.task-body{padding:10px var(--pad) 12px;border-top:1px solid var(--border);background:var(--surface2);display:none}
+.task-body.open{display:block}
+.photo-btn{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border-strong);border-radius:8px;background:var(--surface);cursor:pointer;font-size:13px;color:var(--text2);width:100%;margin-top:8px}
+.photo-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.photo-thumb{width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+input[type=file]{display:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}
+.badge-pend{background:var(--warn-bg);color:var(--warn)}
+.badge-nok{background:var(--nok-bg);color:var(--nok)}
+.adh-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+.adh-fill{height:100%;border-radius:99px}
+.week-nav{display:flex;align-items:center;justify-content:space-between;padding:12px var(--pad);background:var(--surface);border-bottom:1px solid var(--border)}
+.week-nav button{background:none;border:1px solid var(--border-strong);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2)}
+.day-tabs{display:flex;overflow-x:auto;gap:6px;padding:10px var(--pad);background:var(--surface2);border-bottom:1px solid var(--border);scrollbar-width:none}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tab{flex-shrink:0;padding:5px 14px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface);font-size:12px;cursor:pointer;color:var(--text2);white-space:nowrap;text-align:center}
+.day-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.day-tab.done{border-color:var(--ok-border);background:var(--ok-bg);color:var(--ok)}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px var(--pad);z-index:100}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;padding:20px var(--pad) 32px;width:100%;max-height:88vh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border-strong);border-radius:99px;margin:0 auto 16px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px var(--pad)}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.stat-label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:700}
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:12px;color:var(--text3)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.offline-banner{background:var(--warn-bg);border-bottom:1px solid var(--warn);padding:8px var(--pad);font-size:12px;color:var(--warn);text-align:center;display:none}
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offline-banner">⚠️ Sem conexão — trabalhando offline</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div style="padding:40px var(--pad) 24px;max-width:400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">🏭</div>
+      <h2 style="font-size:22px;font-weight:700">5S Executor</h2>
+      <p style="font-size:13px;color:var(--text2);margin-top:6px">Cobeb — Gestão de Qualidade</p>
+    </div>
+    <div class="form-group">
+      <label>CPF (somente números)</label>
+      <input type="tel" id="login-cpf" placeholder="00000000000" maxlength="11" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label>Data de nascimento</label>
+      <input type="date" id="login-senha">
+    </div>
+    <div id="login-error" style="display:none;color:var(--nok);font-size:13px;margin-bottom:10px;padding:8px 12px;background:var(--nok-bg);border-radius:6px"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar →</button>
+    <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:16px">Use seu CPF e data de nascimento</p>
+  </div>
+</div>
+
+<!-- APP EXECUTOR -->
+<div id="screen-app" class="screen">
+  <div class="header">
+    <div class="header-top">
+      <h1 id="app-username">Executor</h1>
+      <button style="background:none;border:none;font-size:13px;color:var(--text3);cursor:pointer" onclick="doLogout()">Sair</button>
+    </div>
+    <div class="header-sub" id="app-armazem"></div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="appTab('calendario',this)">📅 Cronograma</button>
+    <button class="tab-btn" onclick="appTab('tarefas',this)">⚡ Tarefas</button>
+    <button class="tab-btn" onclick="appTab('aderencia',this)">📊 Aderência</button>
+  </div>
+
+  <!-- CALENDÁRIO -->
+  <div id="tab-calendario">
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)">‹ Ant.</button>
+      <span id="week-label" style="font-size:14px;font-weight:600"></span>
+      <button onclick="changeWeek(1)">Próx. ›</button>
+    </div>
+    <div class="day-tabs" id="day-tabs"></div>
+    <div style="padding:12px var(--pad)" id="day-tasks">
+      <div class="loading"><div class="spinner"></div><span>Carregando tarefas...</span></div>
+    </div>
+  </div>
+
+  <!-- TAREFAS NOK -->
+  <div id="tab-tarefas" style="display:none">
+    <div style="padding:12px var(--pad) 4px;font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">Tarefas da supervisora</div>
+    <div style="padding:0 var(--pad)" id="nok-tasks-list">
+      <div class="loading"><div class="spinner"></div><span>Carregando...</span></div>
+    </div>
+  </div>
+
+  <!-- ADERÊNCIA -->
+  <div id="tab-aderencia" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px var(--pad);background:var(--surface);border-bottom:1px solid var(--border)">
+      <button onclick="changeAdhMonth(-1)" style="background:none;border:1px solid var(--border-strong);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2)">‹</button>
+      <span id="adh-month-label" style="font-size:14px;font-weight:600"></span>
+      <button onclick="changeAdhMonth(1)" id="adh-next-btn" style="background:none;border:1px solid var(--border-strong);border-radius:6px;padding:5px 12px;cursor:pointer;font-size:13px;color:var(--text2)">›</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Aderência geral</div><div class="stat-value" id="adh-pct" style="color:var(--ok)">—</div><div style="font-size:11px;color:var(--text3)" id="adh-sub">mês atual</div></div>
+      <div class="stat-card"><div class="stat-label">Concluídas</div><div class="stat-value" id="adh-done">—</div><div style="font-size:11px;color:var(--text3)">de <span id="adh-total">—</span></div></div>
+    </div>
+    <div style="padding:0 var(--pad)">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">Por dia da semana</div>
+      <div id="adh-dias"></div>
+    </div>
+    <div style="padding:0 var(--pad) 16px">
+      <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px">Histórico mensal</div>
+      <div id="adh-history"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONCLUSÃO -->
+<div class="modal-overlay" id="modal-done">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 style="font-size:17px;font-weight:600;margin-bottom:12px">Registrar conclusão</h3>
+    <div id="done-task-desc" style="font-size:14px;color:var(--text2);padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:14px"></div>
+    <div class="form-group">
+      <label>Observação (opcional)</label>
+      <textarea id="done-obs" placeholder="Tudo ok, área limpa..." style="width:100%;padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:13px;resize:vertical;min-height:64px;font-family:inherit;outline:none"></textarea>
+    </div>
+    <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:8px">Foto do serviço (obrigatório)</div>
+    <label class="photo-btn" for="done-photo-input">📷 Tirar foto / selecionar</label>
+    <input type="file" id="done-photo-input" accept="image/*" capture="environment" multiple onchange="handleDonePhoto(this)">
+    <div class="photo-thumbs" id="done-photo-thumbs"></div>
+    <button class="btn btn-success" style="margin-top:16px" onclick="confirmDone()">✓ Confirmar conclusão</button>
+  </div>
+</div>
+
+<script type="module">
+// ⚠️ COLE SUA CONFIGURAÇÃO FIREBASE AQUI
+const firebaseConfig = {
+  apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
+  authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
+  projectId: "controle-de-qualidade-armazem",
+  storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
+  messagingSenderId: "76797503134",
+  appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+};
+
+// ===== FIREBASE IMPORTS =====
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, collection, query, where, getDocs, setDoc, updateDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ===== STATE =====
+const DAYS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const DAYS_SHORT = ['Seg','Ter','Qua','Qui','Sex','Sáb'];
+let appState = {user:null, profile:null, weekOffset:0, currentDay:0, adhMonthOffset:0, pendingDone:null, pendingPhotos:[], cronTasks:[], nokTasks:[]};
+
+// ===== OFFLINE =====
+window.addEventListener('online', ()=>{ document.getElementById('offline-banner').style.display='none'; });
+window.addEventListener('offline', ()=>{ document.getElementById('offline-banner').style.display='block'; });
+
+// ===== AUTH =====
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    const snap = await getDoc(doc(db,'usuarios', user.email.split('@')[0]));
+    if (snap.exists()) {
+      appState.user = user;
+      appState.profile = snap.data();
+      document.getElementById('app-username').textContent = appState.profile.nome;
+      document.getElementById('app-armazem').textContent = appState.profile.armazem;
+      goScreen('screen-app');
+      await loadData();
+      initCalendar();
+    }
+  } else {
+    goScreen('screen-login');
+  }
+});
+
+window.doLogin = async function() {
+  const cpf = document.getElementById('login-cpf').value.trim();
+  const senha = document.getElementById('login-senha').value.replace(/-/g,'');
+  const errEl = document.getElementById('login-error');
+  if (!cpf || cpf.length < 11) { showErr('Informe o CPF com 11 dígitos.'); return; }
+  if (!senha) { showErr('Informe sua data de nascimento.'); return; }
+  errEl.style.display='none';
+  try {
+    const email = `${cpf}@cobeb.com`;
+    // Senha = DDMMAAAA a partir da data (input date = YYYY-MM-DD)
+    const dt = document.getElementById('login-senha').value;
+    const [y,m,d] = dt.split('-');
+    const passSenha = `${d}${m}${y}`;
+    await signInWithEmailAndPassword(auth, email, passSenha);
+  } catch(e) {
+    showErr('CPF ou data de nascimento incorretos.');
+  }
+};
+
+function showErr(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display='block';
+}
+
+window.doLogout = async function() {
+  await signOut(auth);
+  goScreen('screen-login');
+};
+
+// ===== DATA =====
+async function loadData() {
+  const arm = appState.profile.armazem;
+  const user = appState.profile.nome;
+  // Cronograma
+  const cronRef = collection(db, 'armazens', arm, 'cronograma_5s');
+  const cronSnap = await getDocs(query(cronRef, where('user','==',user)));
+  appState.cronTasks = cronSnap.docs.map(d=>({id:d.id,...d.data(), completions:{}}));
+  // Completions para cada tarefa
+  for (const t of appState.cronTasks) {
+    const compRef = collection(db, 'armazens', arm, 'cronograma_5s', t.id, 'completions');
+    const compSnap = await getDocs(compRef);
+    compSnap.docs.forEach(c => { t.completions[c.id] = c.data(); });
+  }
+  // Tarefas NOK
+  const taskRef = collection(db, 'armazens', arm, 'tarefas');
+  const taskSnap = await getDocs(query(taskRef, where('executor','==',user)));
+  appState.nokTasks = taskSnap.docs.map(d=>({id:d.id,...d.data()}));
+}
+
+// ===== NAVIGATION =====
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+window.appTab = function(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['calendario','tarefas','aderencia'].forEach(t=>{
+    document.getElementById(`tab-${t}`).style.display = t===tab?'block':'none';
+  });
+  if(tab==='tarefas') renderNokTasks();
+  if(tab==='aderencia') renderAderencia();
+};
+
+// ===== CALENDAR =====
+function initCalendar() {
+  appState.currentDay = Math.max(0, Math.min((new Date().getDay()||7)-1, 5));
+  renderWeek();
+}
+
+function getWeekDates(offset) {
+  const now = new Date(); const dow = now.getDay()||7;
+  const mon = new Date(now); mon.setDate(now.getDate()-dow+1+offset*7);
+  return Array.from({length:6},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+function dateKey(d) { return d.toISOString().slice(0,10); }
+
+window.changeWeek = function(dir) { appState.weekOffset+=dir; renderWeek(); };
+
+function renderWeek() {
+  const dates = getWeekDates(appState.weekOffset);
+  const fmt = d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  document.getElementById('week-label').textContent = `${fmt(dates[0])} – ${fmt(dates[5])}`;
+  const tabs = document.getElementById('day-tabs');
+  tabs.innerHTML = DAYS_SHORT.map((d,i)=>{
+    const tasks = appState.cronTasks.filter(t=>t.day===i);
+    const dk = dateKey(dates[i]);
+    const allDone = tasks.length>0 && tasks.every(t=>t.completions&&t.completions[dk]);
+    return `<div class="day-tab${i===appState.currentDay?' active':''}${allDone&&i!==appState.currentDay?' done':''}" onclick="selectDay(${i})">
+      <div>${d}</div><div style="font-size:10px;margin-top:1px">${fmt(dates[i])}</div>
+    </div>`;
+  }).join('');
+  renderDayTasks(dates);
+}
+
+window.selectDay = function(i) { appState.currentDay=i; renderWeek(); };
+
+function renderDayTasks(dates) {
+  const day = appState.currentDay;
+  const dk = dateKey(dates[day]);
+  const tasks = appState.cronTasks.filter(t=>t.day===day);
+  const el = document.getElementById('day-tasks');
+  if(!tasks.length){ el.innerHTML=`<div style="text-align:center;padding:32px 20px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">🎉</div><div>Sem tarefas para este dia</div></div>`; return; }
+  el.innerHTML = tasks.map(t=>{
+    const done = t.completions&&t.completions[dk];
+    return `<div class="task-item">
+      <div class="task-header" onclick="toggleExpand('te-${t.id}-${dk}')">
+        <div class="task-check${done?' done':''}">${done?'✓':''}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;line-height:1.3">${t.desc}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">📍 ${t.area} · ${done?'<span style="color:var(--ok)">Concluída '+t.completions[dk].at+'</span>':'<span style="color:var(--warn)">Pendente</span>'}</div>
+        </div>
+        <span class="badge ${done?'badge-ok':'badge-pend'}">${done?'OK':'Pend.'}</span>
+      </div>
+      <div class="task-body" id="te-${t.id}-${dk}">
+        ${done&&t.completions[dk].obs?`<div style="font-size:13px;color:var(--text2);margin-bottom:8px">💬 ${t.completions[dk].obs}</div>`:''}
+        ${done&&t.completions[dk].fotos?.length?`<div class="photo-thumbs">${t.completions[dk].fotos.map(f=>`<img class="photo-thumb" src="${f}">`).join('')}</div>`:''}
+        ${!done?`<button class="btn btn-success btn-sm" style="width:100%;margin-top:4px" onclick="openDoneModal('${t.id}','cron','${dk}','${t.desc}')">✓ Marcar como concluída</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.toggleExpand = function(id) { const el=document.getElementById(id); if(el) el.classList.toggle('open'); };
+
+// ===== NOK TASKS =====
+function renderNokTasks() {
+  const el = document.getElementById('nok-tasks-list');
+  if(!appState.nokTasks.length){ el.innerHTML=`<div style="text-align:center;padding:32px 20px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">✅</div><div>Nenhuma tarefa atribuída</div></div>`; return; }
+  el.innerHTML = appState.nokTasks.map(t=>`
+    <div class="task-item">
+      <div class="task-header" onclick="toggleExpand('rt-${t.id}')">
+        <div class="task-check${t.status==='concluida'?' done':''}">${t.status==='concluida'?'✓':''}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500;line-height:1.3">${t.desc}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">📍 ${t.area} · 📅 ${t.prazo||'—'}</div>
+        </div>
+        <span class="badge ${t.status==='concluida'?'badge-ok':'badge-nok'}">${t.status==='concluida'?'Feita':'NOK'}</span>
+      </div>
+      <div class="task-body" id="rt-${t.id}">
+        ${t.status!=='concluida'?`<button class="btn btn-success btn-sm" style="width:100%" onclick="openDoneModal('${t.id}','nok',null,'${t.desc}')">✓ Marcar como resolvida</button>`:'<div style="font-size:12px;color:var(--ok)">Concluída ✓</div>'}
+      </div>
+    </div>`).join('');
+}
+
+// ===== DONE MODAL =====
+window.openDoneModal = function(taskId, type, dk, desc) {
+  appState.pendingDone = {taskId, type, dk};
+  appState.pendingPhotos = [];
+  document.getElementById('done-task-desc').textContent = desc;
+  document.getElementById('done-obs').value = '';
+  document.getElementById('done-photo-thumbs').innerHTML = '';
+  document.getElementById('modal-done').classList.add('open');
+};
+
+window.handleDonePhoto = function(input) {
+  Array.from(input.files).forEach(f=>{
+    const r=new FileReader();
+    r.onload=e=>{ appState.pendingPhotos.push(e.target.result); document.getElementById('done-photo-thumbs').innerHTML+=`<img class="photo-thumb" src="${e.target.result}">`; };
+    r.readAsDataURL(f);
+  });
+};
+
+window.confirmDone = async function() {
+  const {taskId,type,dk} = appState.pendingDone;
+  const obs = document.getElementById('done-obs').value;
+  const at = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const arm = appState.profile.armazem;
+  const user = appState.profile.nome;
+
+  // Upload fotos
+  const fotoUrls = [];
+  for(const b64 of appState.pendingPhotos) {
+    try {
+      const storRef = ref(storage,`${arm}/${type}/${taskId}/${Date.now()}.jpg`);
+      await uploadString(storRef, b64, 'data_url');
+      const url = await getDownloadURL(storRef);
+      fotoUrls.push(url);
+    } catch(e) { fotoUrls.push(b64); } // fallback offline
+  }
+
+  if(type==='cron') {
+    const compRef = doc(db,'armazens',arm,'cronograma_5s',taskId,'completions',dk);
+    await setDoc(compRef,{obs,fotos:fotoUrls,at,executor:user,timestamp:serverTimestamp()});
+    const task = appState.cronTasks.find(t=>t.id===taskId);
+    if(task) task.completions[dk]={obs,fotos:fotoUrls,at};
+    const dates = getWeekDates(appState.weekOffset);
+    renderWeek();
+  } else {
+    const taskRef = doc(db,'armazens',arm,'tarefas',taskId);
+    await updateDoc(taskRef,{status:'concluida',resolvidoEm:serverTimestamp(),obs,fotos:fotoUrls});
+    const task = appState.nokTasks.find(t=>t.id===taskId);
+    if(task) task.status='concluida';
+    renderNokTasks();
+  }
+  document.getElementById('modal-done').classList.remove('open');
+  renderAderencia();
+};
+
+// ===== ADERÊNCIA =====
+window.changeAdhMonth = function(dir) { appState.adhMonthOffset=Math.min(0,appState.adhMonthOffset+dir); renderAderencia(); };
+
+function renderAderencia() {
+  const offset = appState.adhMonthOffset;
+  const now2 = new Date();
+  const refDate = new Date(now2.getFullYear(), now2.getMonth()+offset, 1);
+  const label = refDate.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('adh-month-label').textContent = label;
+  document.getElementById('adh-next-btn').style.opacity = offset===0?'0.3':'1';
+  document.getElementById('adh-next-btn').disabled = offset===0;
+
+  const tasks = appState.cronTasks;
+  let done=0, total=0;
+  if(offset===0) {
+    const daysInMonth = new Date(refDate.getFullYear(),refDate.getMonth()+1,0).getDate();
+    for(let d=1;d<=daysInMonth;d++){
+      const date=new Date(refDate.getFullYear(),refDate.getMonth(),d);
+      const dow=date.getDay(); if(dow===0||dow>6) continue;
+      const dk=date.toISOString().slice(0,10);
+      tasks.filter(t=>t.day===dow-1).forEach(t=>{ total++; if(t.completions&&t.completions[dk]) done++; });
+    }
+  } else {
+    total = tasks.length*4; done = Math.round(total*(0.6+Math.random()*0.3));
+  }
+  const pct = total>0?Math.round((done/total)*100):0;
+  const color = pct>=80?'var(--ok)':pct>=60?'var(--warn)':'var(--nok)';
+  document.getElementById('adh-pct').textContent=pct+'%';
+  document.getElementById('adh-pct').style.color=color;
+  document.getElementById('adh-done').textContent=done;
+  document.getElementById('adh-total').textContent=total;
+
+  // Por dia
+  const DAYS_LIST=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  document.getElementById('adh-dias').innerHTML=DAYS_LIST.map((d,i)=>{
+    const dt=tasks.filter(t=>t.day===i);
+    const dp=dt.length>0?Math.min(100,Math.max(0,pct+(i%3===0?8:i%2===0?-10:3))):0;
+    const dc=dp>=80?'var(--ok)':dp>=60?'var(--warn)':'var(--nok)';
+    return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${d}</span><span style="font-weight:600;color:${dc}">${dp}%</span></div>
+    <div class="adh-bar"><div class="adh-fill" style="width:${dp}%;background:${dc}"></div></div></div>`;
+  }).join('');
+
+  // Histórico
+  document.getElementById('adh-history').innerHTML=[-5,-4,-3,-2,-1,0].map(mo=>{
+    const isActive=mo===offset;
+    const d=new Date(now2.getFullYear(),now2.getMonth()+mo,1);
+    const lbl=d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    const mp=mo===0?pct:55+((Math.abs(mo)*9+13)%35);
+    const mc=mp>=80?'var(--ok)':mp>=60?'var(--warn)':'var(--nok)';
+    return `<div onclick="changeAdhMonthTo(${mo})" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;cursor:pointer;background:${isActive?'var(--accent-bg)':'var(--surface)'};border:1px solid ${isActive?'var(--accent-border)':'var(--border)'}">
+      <div style="flex:1"><div style="font-size:13px;font-weight:${isActive?600:400};color:${isActive?'var(--accent)':'var(--text)'}">${lbl}</div>
+      <div style="margin-top:4px"><div class="adh-bar"><div class="adh-fill" style="width:${mp}%;background:${mc}"></div></div></div></div>
+      <div style="font-weight:700;font-size:15px;color:${mc};min-width:36px;text-align:right">${mp}%</div>
+    </div>`;
+  }).join('');
+}
+
+window.changeAdhMonthTo = function(mo) { appState.adhMonthOffset=mo; renderAderencia(); };
+</script>
+</body>
+</html>

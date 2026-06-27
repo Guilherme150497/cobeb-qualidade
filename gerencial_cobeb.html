@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobeb — Painel de Qualidade</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f0ec;--surface:#fff;--surface2:#f7f7f4;--surface3:#efefeb;
+  --border:#e2e1da;--border-strong:#ccccc4;
+  --text:#1a1a18;--text2:#5c5c58;--text3:#9c9c96;
+  --accent:#1a4fd6;--accent-bg:#eef2fd;--accent-light:#d0dafc;
+  --ok:#15803d;--ok-bg:#f0fdf4;--ok-light:#bbf7d0;
+  --warn:#b45309;--warn-bg:#fefce8;--warn-light:#fde68a;
+  --nok:#b91c1c;--nok-bg:#fef2f2;--nok-light:#fecaca;
+  --purple:#6d28d9;--purple-bg:#f5f3ff;
+  --sidebar:220px;--radius:8px;--pad:20px;
+}
+
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--text);flex-shrink:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform 0.25s}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sidebar-logo .logo-mark{font-size:11px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:4px}
+.sidebar-logo h1{font-size:18px;font-weight:700;color:#fff;line-height:1.2}
+.sidebar-logo p{font-size:11px;color:rgba(255,255,255,0.4);margin-top:3px}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto}
+.nav-section{padding:8px 20px 4px;font-size:10px;font-weight:700;letter-spacing:1.5px;color:rgba(255,255,255,0.25);text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:rgba(255,255,255,0.55);font-size:13px;transition:all 0.15s;border-left:2px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85)}
+.nav-item.active{background:rgba(255,255,255,0.1);color:#fff;border-left-color:#fff}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--nok);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08)}
+.sidebar-user{display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;color:#fff;font-weight:500}
+.user-role{font-size:11px;color:rgba(255,255,255,0.4)}
+.sidebar-armazem{margin-top:12px}
+.sidebar-armazem select{width:100%;padding:7px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#fff;font-size:12px;outline:none;cursor:pointer}
+.sidebar-armazem select option{background:#2a2a28;color:#fff}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90}
+.topbar-title{font-size:16px;font-weight:600}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.btn{padding:7px 14px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border-strong)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.content{padding:var(--pad);flex:1}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.card-header{padding:14px var(--pad);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:600}
+.card-body{padding:var(--pad)}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.kpi-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.kpi-value{font-size:28px;font-weight:700;line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:12px;color:var(--text3)}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:99px;margin-top:6px}
+.trend-up{background:var(--ok-light);color:var(--ok)}
+.trend-dn{background:var(--nok-light);color:var(--nok)}
+.trend-eq{background:var(--warn-light);color:var(--warn)}
+
+/* CHARTS ROW */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-wrap{position:relative;height:220px}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.data-table td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--surface2)}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:600}
+.badge-ok{background:var(--ok-light);color:var(--ok)}
+.badge-nok{background:var(--nok-light);color:var(--nok)}
+.badge-warn{background:var(--warn-light);color:var(--warn)}
+.badge-pend{background:#e0e0dc;color:var(--text2)}
+
+/* PROGRESS BAR */
+.prog-bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;transition:width 0.4s}
+
+/* SECTION TITLE */
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:12px}
+
+/* TABS */
+.tab-row{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab-item{padding:10px 16px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all 0.15s}
+.tab-item.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+/* MONTH NAV */
+.month-nav{display:flex;align-items:center;gap:10px}
+.month-nav button{background:var(--surface2);border:1px solid var(--border-strong);border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px;color:var(--text2)}
+.month-nav span{font-size:13px;font-weight:600;min-width:140px;text-align:center}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:300;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--surface);border-radius:12px;padding:28px;width:560px;max-width:95vw;max-height:88vh;overflow-y:auto}
+.modal-box h3{font-size:16px;font-weight:700;margin-bottom:20px}
+.modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);margin-top:-4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:12px;font-weight:600;color:var(--text2)}
+.form-group input,.form-group select,.form-group textarea{padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:13px;background:var(--surface);color:var(--text);outline:none}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:72px;font-family:inherit}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* AREA STATUS GRID */
+.area-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.area-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.area-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.area-name{font-size:13px;font-weight:600}
+.area-owner{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* EXECUTOR LIST */
+.exec-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.exec-row:last-child{border-bottom:none}
+.exec-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0}
+.exec-info{flex:1}
+.exec-name{font-size:13px;font-weight:500}
+.exec-detail{font-size:11px;color:var(--text3)}
+.exec-pct{font-size:14px;font-weight:700;min-width:40px;text-align:right}
+
+/* TASKS LIST */
+.task-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.task-row:last-child{border-bottom:none}
+.task-dot{width:8px;height:8px;border-radius:50%;background:var(--nok);flex-shrink:0;margin-top:4px}
+.task-dot.ok{background:var(--ok)}
+.task-dot.warn{background:var(--warn)}
+
+/* RONDA HISTORY */
+.ronda-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.ronda-row:hover{background:var(--surface2);margin:0 -16px;padding:10px 16px}
+.ronda-row:last-child{border-bottom:none}
+
+/* CRONOGRAMA TABLE */
+.cron-table{width:100%;border-collapse:collapse}
+.cron-table th,.cron-table td{padding:8px 10px;border:1px solid var(--border);font-size:12px;vertical-align:top}
+.cron-table th{background:var(--surface2);font-weight:700;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3)}
+.cron-table .cron-task{background:var(--accent-bg);border-radius:4px;padding:3px 7px;margin:2px 0;display:block;font-size:11px;color:var(--accent)}
+.cron-table .cron-user{font-size:10px;color:var(--text3)}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .charts-row{grid-template-columns:1fr}
+  .area-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">Cobeb</div>
+    <h1>Qualidade</h1>
+    <p>Painel de Gestão</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section">Visão Geral</div>
+    <div class="nav-item active" onclick="navTo('dashboard')">
+      <span class="nav-icon">◼</span> Dashboard
+    </div>
+    <div class="nav-section">Módulo 1</div>
+    <div class="nav-item" onclick="navTo('rondas')">
+      <span class="nav-icon">📋</span> Rondas de Qualidade
+    </div>
+    <div class="nav-item" onclick="navTo('tarefas')">
+      <span class="nav-icon">⚡</span> Tarefas em Aberto
+      <span class="nav-badge" id="badge-tarefas">2</span>
+    </div>
+    <div class="nav-section">Módulo 2</div>
+    <div class="nav-item" onclick="navTo('cronograma')">
+      <span class="nav-icon">🗓️</span> Cronograma 5S
+    </div>
+    <div class="nav-item" onclick="navTo('aderencia5s')">
+      <span class="nav-icon">📊</span> Aderência 5S
+    </div>
+    <div class="nav-section">Módulo 3</div>
+    <div class="nav-item" onclick="navTo('auditoria')">
+      <span class="nav-icon">🔍</span> Auditoria 5S
+    </div>
+    <div class="nav-item" onclick="navTo('donos')">
+      <span class="nav-icon">🏷️</span> Donos de Área
+    </div>
+    <div class="nav-section">Gestão</div>
+    <div class="nav-item" onclick="navTo('usuarios')">
+      <span class="nav-icon">👥</span> Usuários
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-avatar">TG</div>
+      <div><div class="user-name">Talita Gabriela</div><div class="user-role">Supervisora</div></div>
+    </div>
+    <div class="sidebar-armazem" style="margin-top:12px">
+      <select id="global-armazem" onchange="onArmazemChange()">
+        <option>Pará de Minas</option>
+        <option>Lagoa da Prata</option>
+        <option>Abaeté</option>
+      </select>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none;background:none;border:none;font-size:22px;cursor:pointer" id="menu-btn">☰</button>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <span id="month-display"></span>
+        <button onclick="changeMonth(1)" id="month-next">›</button>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openNewRondaModal()">+ Nova Ronda</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-header"><h3>Evolução das Rondas de Qualidade</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-rondas"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Aderência 5S — Rotinas</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-5s"></canvas></div></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-header"><h3>Auditoria 5S — % por Área</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-audit"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Aderência às Auditorias 5S</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-audit-adh"></canvas></div></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header"><h3>Tarefas em Aberto</h3><button class="btn btn-secondary btn-sm" onclick="navTo('tarefas')">Ver todas</button></div>
+          <div class="card-body" id="dash-tarefas"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Últimas Rondas</h3><button class="btn btn-secondary btn-sm" onclick="navTo('rondas')">Ver todas</button></div>
+          <div class="card-body" id="dash-rondas"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RONDAS ===== -->
+    <div class="page" id="page-rondas">
+      <div class="card">
+        <div class="card-header">
+          <h3>Histórico de Rondas</h3>
+          <button class="btn btn-primary btn-sm" onclick="openNewRondaModal()">+ Nova Ronda</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-rondas"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TAREFAS ===== -->
+    <div class="page" id="page-tarefas">
+      <div class="tab-row">
+        <div class="tab-item active" onclick="tarefasTab('abertas',this)">Em aberto</div>
+        <div class="tab-item" onclick="tarefasTab('concluidas',this)">Concluídas</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3 id="tarefas-tab-title">Tarefas em aberto</h3></div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-tarefas"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CRONOGRAMA 5S ===== -->
+    <div class="page" id="page-cronograma">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <h3>Cronograma Semanal 5S</h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddCronModal()">+ Tarefa</button>
+        </div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="cron-table" id="tbl-cron"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ADERÊNCIA 5S ===== -->
+    <div class="page" id="page-aderencia5s">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)" id="adh5s-kpis"></div>
+      <div class="charts-row" style="grid-template-columns:2fr 1fr">
+        <div class="card">
+          <div class="card-header"><h3>Histórico mensal — Aderência às rotinas 5S</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-adh5s"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Por executor</h3></div>
+          <div class="card-body" id="adh5s-executores" style="overflow-y:auto;max-height:240px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Detalhamento por dia da semana</h3></div>
+        <div class="card-body" id="adh5s-dias"></div>
+      </div>
+    </div>
+
+    <!-- ===== AUDITORIA 5S ===== -->
+    <div class="page" id="page-auditoria">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)" id="audit-kpis"></div>
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-header"><h3>Evolução mensal — % Conformidade 5S</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-audit-conf"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Aderência às auditorias (áreas auditadas/mês)</h3></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="chart-audit-adh2"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Status por área — <span id="audit-area-month"></span></h3></div>
+        <div class="card-body">
+          <div class="area-grid" id="audit-areas-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DONOS DE ÁREA ===== -->
+    <div class="page" id="page-donos">
+      <div class="card">
+        <div class="card-header">
+          <h3>Donos do 5S por Área</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="donos-month-sel" onchange="renderDonos()" style="padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font-size:12px;background:var(--surface)"></select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-donos"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== USUÁRIOS ===== -->
+    <div class="page" id="page-usuarios">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px" id="usuarios-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: NOVA RONDA -->
+<div class="modal-bg" id="modal-ronda">
+  <div class="modal-box">
+    <h3>Nova Ronda de Qualidade <button class="modal-close" onclick="closeModal('modal-ronda')">×</button></h3>
+    <div class="form-row">
+      <div class="form-group"><label>Armazém</label><select id="nr-armazem"><option>Pará de Minas</option><option>Lagoa da Prata</option><option>Abaeté</option></select></div>
+      <div class="form-group"><label>Data e Hora</label><input type="datetime-local" id="nr-dt"></div>
+    </div>
+    <div class="form-group full" style="margin-bottom:14px"><label>Observações iniciais</label><textarea id="nr-obs" placeholder="Condições gerais, turno..."></textarea></div>
+    <p style="font-size:12px;color:var(--text3);padding:10px;background:var(--accent-bg);border-radius:6px">O checklist completo é realizado no App Ronda (celular). Após finalizar, o resultado aparece automaticamente aqui.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-ronda')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewRonda()">Criar e abrir no App →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TAREFA CRONOGRAMA -->
+<div class="modal-bg" id="modal-cron">
+  <div class="modal-box">
+    <h3>Nova Tarefa 5S <button class="modal-close" onclick="closeModal('modal-cron')">×</button></h3>
+    <div class="form-row">
+      <div class="form-group"><label>Descrição</label><input type="text" id="mc-desc" placeholder="Ex: Jogar água no Picking"></div>
+      <div class="form-group"><label>Área</label>
+        <select id="mc-area"><option>Picking</option><option>Doca</option><option>Market Place</option><option>Área de Sucata</option><option>Repack</option><option>Pátio</option><option>Câmara Fria</option><option>PNC</option><option>Estoque Central</option><option>Geral</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Responsável</label><select id="mc-user"></select></div>
+      <div class="form-group"><label>Dias da semana</label>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px" id="mc-days">
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="0"> Seg</label>
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="1"> Ter</label>
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="2"> Qua</label>
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="3"> Qui</label>
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="4"> Sex</label>
+          <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" value="5"> Sáb</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-cron')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCronTask()">Salvar tarefa ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DONO DE ÁREA -->
+<div class="modal-bg" id="modal-dono">
+  <div class="modal-box" style="width:400px">
+    <h3 id="modal-dono-title">Alterar dono <button class="modal-close" onclick="closeModal('modal-dono')">×</button></h3>
+    <div class="form-group" style="margin-bottom:16px"><label>Responsável</label><select id="md-user"></select></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-dono')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveDono()">Salvar ✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const USERS = {
+  'Pará de Minas':['Matheuzão','Leandrinho','Leandro Alves','Matheus','Manoel','Geliton','Gedofredo'],
+  'Lagoa da Prata':['Joelcio','Pedro','Anderson','Bruninho','Vitor','Alisson','Sergio','Rafael','Erick','Renato','Vicente','José Pires'],
+  'Abaeté':['Rafael','Rodrigo','Edimar','Anderson']
+};
+const DAYS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const AREAS = ['Estoque Central','Área de Repack','Picking','Câmara Fria','Área de PNC','Área de Devolução','Área de Despejo','Pátio','Área de Sucata','Infraestrutura'];
+const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+// Gera dados históricos simulados
+const now = new Date();
+function mkLabel(mo){ const d=new Date(now.getFullYear(),now.getMonth()+mo,1); return `${MONTHS[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`; }
+function mkKey(mo){ const d=new Date(now.getFullYear(),now.getMonth()+mo,1); return d.toISOString().slice(0,7); }
+
+const RONDAS_HIST = [
+  {id:'r1',armazem:'Pará de Minas',dt:'2026-06-26',auditora:'Talita',overall:72,nok:8,tasks:2},
+  {id:'r2',armazem:'Lagoa da Prata',dt:'2026-06-20',auditora:'Talita',overall:81,nok:4,tasks:1},
+  {id:'r3',armazem:'Abaeté',dt:'2026-06-15',auditora:'Talita',overall:65,nok:11,tasks:3},
+  {id:'r4',armazem:'Pará de Minas',dt:'2026-05-28',auditora:'Talita',overall:68,nok:10,tasks:2},
+  {id:'r5',armazem:'Lagoa da Prata',dt:'2026-05-22',auditora:'Talita',overall:77,nok:6,tasks:1},
+  {id:'r6',armazem:'Pará de Minas',dt:'2026-04-25',auditora:'Talita',overall:60,nok:14,tasks:4},
+];
+
+const TAREFAS = [
+  {id:'t1',tipo:'ronda',area:'Câmara Fria',armazem:'Pará de Minas',desc:'Segregar barris vencidos e acionar qualidade',executor:'Matheuzão',prazo:'2026-06-28',status:'aberta'},
+  {id:'t2',tipo:'ronda',area:'Estoque Central',armazem:'Pará de Minas',desc:'Identificar paletes avariados com selo vermelho',executor:'Leandrinho',prazo:'2026-06-27',status:'aberta'},
+  {id:'t3',tipo:'ronda',area:'Pátio',armazem:'Lagoa da Prata',desc:'Remover veículos parados fora das docas',executor:'Rafael',prazo:'2026-06-28',status:'concluida'},
+  {id:'t4',tipo:'5s',area:'Picking',armazem:'Pará de Minas',desc:'Reorganizar identificação dos produtos no picking',executor:'Matheus',prazo:'2026-06-30',status:'aberta'},
+];
+
+// Cronograma 5S
+const BASE_TASKS_CRON = [
+  {desc:'Jogar água no Picking',area:'Picking'},
+  {desc:'Lavar doca da carreta',area:'Doca'},
+  {desc:'Lavar Market Place',area:'Market Place'},
+  {desc:'Organizar e lavar área de sucata',area:'Área de Sucata'},
+];
+const cronogramas = {};
+['Pará de Minas','Lagoa da Prata','Abaeté'].forEach(arm => {
+  cronogramas[arm] = [];
+  DAYS.forEach((day,di) => {
+    BASE_TASKS_CRON.forEach((t,ti) => {
+      const users = USERS[arm]||[];
+      cronogramas[arm].push({id:`${arm}-${di}-${ti}`,desc:t.desc,area:t.area,day:di,user:users[ti%users.length]});
+    });
+  });
+});
+
+// Donos de área
+const areaDonos = {};
+AREAS.forEach((area,ai) => {
+  ['Pará de Minas','Lagoa da Prata','Abaeté'].forEach(arm => {
+    const key=`${arm}||${area}`;
+    areaDonos[key]={};
+    for(let mo=-2;mo<=0;mo++){
+      const mk=mkKey(mo);
+      areaDonos[key][mk]=(USERS[arm]||[])[ai%(USERS[arm]||[]).length];
+    }
+  });
+});
+
+// Dados históricos simulados para gráficos
+const HIST_RONDAS_PCT = [-5,-4,-3,-2,-1,0].map(mo=>({label:mkLabel(mo),val:60+((Math.abs(mo)*7+13)%25)}));
+const HIST_5S_ADH = [-5,-4,-3,-2,-1,0].map(mo=>({label:mkLabel(mo),val:55+((Math.abs(mo)*9+8)%35)}));
+const HIST_AUDIT_CONF = [-5,-4,-3,-2,-1,0].map(mo=>({label:mkLabel(mo),val:62+((Math.abs(mo)*5+11)%28)}));
+const HIST_AUDIT_ADH = [-5,-4,-3,-2,-1,0].map(mo=>({label:mkLabel(mo),val:Math.round((6+Math.abs(mo)%4)/10*100)}));
+// override últimos
+HIST_RONDAS_PCT[5].val=72; HIST_5S_ADH[5].val=68; HIST_AUDIT_CONF[5].val=70; HIST_AUDIT_ADH[5].val=70;
+HIST_RONDAS_PCT[4].val=68; HIST_5S_ADH[4].val=75; HIST_AUDIT_CONF[4].val=78; HIST_AUDIT_ADH[4].val=80;
+
+// Auditoria histórica
+const HIST_AUDIT_AREAS = {};
+AREAS.forEach((area,ai) => {
+  ['Pará de Minas','Lagoa da Prata','Abaeté'].forEach(arm => {
+    for(let mo=-5;mo<0;mo++){
+      const mk=mkKey(mo); const key=`${arm}||${mk}`;
+      if(!HIST_AUDIT_AREAS[key]) HIST_AUDIT_AREAS[key]={};
+      if((ai+mo+arm.length)%3!==0) HIST_AUDIT_AREAS[key][area]={overall:55+((ai*7+Math.abs(mo)*11+arm.length*3)%41)};
+    }
+  });
+});
+
+// ===================== STATE =====================
+let currentPage = 'dashboard';
+let monthOffset = 0;
+let tarefasTabState = 'abertas';
+let editingDono = null;
+let charts = {};
+
+// ===================== NAVIGATION =====================
+function navTo(page) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+  // find matching nav item
+  document.querySelectorAll('.nav-item').forEach(el => { if(el.onclick?.toString().includes(`'${page}'`)) el.classList.add('active'); });
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.getElementById('page-title').textContent = {
+    dashboard:'Dashboard',rondas:'Rondas de Qualidade',tarefas:'Tarefas em Aberto',
+    cronograma:'Cronograma 5S',aderencia5s:'Aderência 5S',auditoria:'Auditoria 5S',
+    donos:'Donos de Área',usuarios:'Usuários'
+  }[page]||page;
+  currentPage = page;
+  renderPage(page);
+}
+
+function renderPage(page) {
+  const arm = document.getElementById('global-armazem').value;
+  if(page==='dashboard') renderDashboard();
+  if(page==='rondas') renderRondas();
+  if(page==='tarefas') renderTarefas(tarefasTabState);
+  if(page==='cronograma') renderCronograma();
+  if(page==='aderencia5s') renderAderencia5S();
+  if(page==='auditoria') renderAuditoria();
+  if(page==='donos') renderDonos();
+  if(page==='usuarios') renderUsuarios();
+}
+
+function onArmazemChange() { renderPage(currentPage); }
+
+function changeMonth(dir) {
+  monthOffset = Math.min(0, monthOffset+dir);
+  document.getElementById('month-next').style.opacity = monthOffset===0?'0.3':'1';
+  document.getElementById('month-next').disabled = monthOffset===0;
+  updateMonthDisplay();
+  renderPage(currentPage);
+}
+
+function updateMonthDisplay() {
+  const d = new Date(now.getFullYear(), now.getMonth()+monthOffset, 1);
+  document.getElementById('month-display').textContent = d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+
+function getColor(pct) { return pct>=80?'#15803d':pct>=60?'#b45309':'#b91c1c'; }
+function getBadgeClass(pct) { return pct>=80?'badge-ok':pct>=60?'badge-warn':'badge-nok'; }
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  const arm = document.getElementById('global-armazem').value;
+  const tarefasAbertas = TAREFAS.filter(t=>t.armazem===arm&&t.status==='aberta').length;
+  const lastRonda = RONDAS_HIST.filter(r=>r.armazem===arm)[0];
+  const currentAdh5s = HIST_5S_ADH[5].val;
+  const auditAdhPct = HIST_AUDIT_ADH[5].val;
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Última Ronda</div>
+      <div class="kpi-value" style="color:${getColor(lastRonda?.overall||0)}">${lastRonda?lastRonda.overall+'%':'—'}</div>
+      <div class="kpi-sub">${lastRonda?new Date(lastRonda.dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'Sem dados'}</div>
+      <div class="kpi-trend trend-${lastRonda?.overall>=80?'up':'dn'}">${lastRonda?.overall>=80?'↑ Acima':'↓ Abaixo'} da meta 80%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Aderência 5S Rotinas</div>
+      <div class="kpi-value" style="color:${getColor(currentAdh5s)}">${currentAdh5s}%</div>
+      <div class="kpi-sub">tarefas concluídas este mês</div>
+      <div class="kpi-trend trend-${currentAdh5s>=80?'up':'dn'}">${currentAdh5s>=80?'↑':'↓'} meta 80%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Aderência Auditorias 5S</div>
+      <div class="kpi-value" style="color:${getColor(auditAdhPct)}">${auditAdhPct}%</div>
+      <div class="kpi-sub">áreas auditadas no mês</div>
+      <div class="kpi-trend trend-${auditAdhPct>=80?'up':'dn'}">${auditAdhPct>=80?'↑':'↓'} meta 80%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Tarefas em Aberto</div>
+      <div class="kpi-value" style="color:${tarefasAbertas>0?'var(--nok)':'var(--ok)'}">${tarefasAbertas}</div>
+      <div class="kpi-sub">pendentes de resolução</div>
+      <div class="kpi-trend ${tarefasAbertas>3?'trend-dn':tarefasAbertas>0?'trend-eq':'trend-up'}">${tarefasAbertas===0?'✓ Tudo em dia':tarefasAbertas+' pendente(s)'}</div>
+    </div>`;
+
+  // Tarefas no dash
+  const abertas = TAREFAS.filter(t=>t.armazem===arm&&t.status==='aberta');
+  document.getElementById('dash-tarefas').innerHTML = abertas.length===0
+    ? '<p style="color:var(--text3);font-size:13px;text-align:center;padding:16px">✓ Nenhuma tarefa em aberto</p>'
+    : abertas.map(t=>`<div class="task-row">
+        <div class="task-dot ${t.tipo==='5s'?'warn':''}"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500">${t.desc}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">📍 ${t.area} · 👤 ${t.executor} · 📅 ${t.prazo}</div>
+        </div>
+        <span class="badge badge-nok">${t.tipo==='5s'?'5S':'Ronda'}</span>
+      </div>`).join('');
+
+  // Últimas rondas no dash
+  const rondas = RONDAS_HIST.filter(r=>r.armazem===arm).slice(0,4);
+  document.getElementById('dash-rondas').innerHTML = rondas.map(r=>`
+    <div class="ronda-row">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${r.armazem}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${new Date(r.dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</div>
+      </div>
+      <div style="font-weight:700;font-size:16px;color:${getColor(r.overall)}">${r.overall}%</div>
+    </div>`).join('');
+
+  // Charts
+  buildLineChart('chart-rondas', HIST_RONDAS_PCT, '#1a4fd6');
+  buildLineChart('chart-5s', HIST_5S_ADH, '#15803d');
+  buildBarChart('chart-audit', AREAS.slice(0,6).map((a,i)=>({label:a.replace('Área de ',''),val:60+((i*13+7)%35)})));
+  buildLineChart('chart-audit-adh', HIST_AUDIT_ADH, '#6d28d9');
+}
+
+function buildLineChart(id, data, color) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:data.map(d=>d.label),
+      datasets:[{data:data.map(d=>d.val),borderColor:color,backgroundColor:color+'18',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:color}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'#e2e1da'}},
+              x:{ticks:{font:{size:11}},grid:{display:false}}}}
+  });
+}
+
+function buildBarChart(id, data) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  const colors = data.map(d=>d.val>=80?'#15803d':d.val>=60?'#b45309':'#b91c1c');
+  charts[id] = new Chart(ctx, {
+    type:'bar',
+    data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.val),backgroundColor:colors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%',font:{size:11}},grid:{color:'#e2e1da'}},
+              x:{ticks:{font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+// ===================== RONDAS =====================
+function renderRondas() {
+  const arm = document.getElementById('global-armazem').value;
+  const data = RONDAS_HIST.filter(r=>r.armazem===arm);
+  document.getElementById('tbl-rondas').innerHTML = `
+    <thead><tr><th>Data</th><th>Armazém</th><th>Resultado</th><th>NOKs</th><th>Tarefas</th><th>Auditora</th><th></th></tr></thead>
+    <tbody>${data.map(r=>`<tr>
+      <td>${new Date(r.dt).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})}</td>
+      <td>${r.armazem}</td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <span style="font-weight:700;color:${getColor(r.overall)}">${r.overall}%</span>
+        <div style="width:80px"><div class="prog-bar"><div class="prog-fill" style="width:${r.overall}%;background:${getColor(r.overall)}"></div></div></div>
+      </div></td>
+      <td><span class="badge badge-nok">✗ ${r.nok} NOK</span></td>
+      <td>${r.tasks} tarefa(s)</td>
+      <td>${r.auditora}</td>
+      <td><button class="btn btn-secondary btn-sm">Ver detalhes</button></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+// ===================== TAREFAS =====================
+function tarefasTab(tab, el) {
+  tarefasTabState = tab;
+  document.querySelectorAll('#page-tarefas .tab-item').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tarefas-tab-title').textContent = tab==='abertas'?'Tarefas em aberto':'Tarefas concluídas';
+  renderTarefas(tab);
+}
+
+function renderTarefas(tab) {
+  const arm = document.getElementById('global-armazem').value;
+  const data = TAREFAS.filter(t=>t.armazem===arm&&t.status===(tab==='abertas'?'aberta':'concluida'));
+  document.getElementById('badge-tarefas').textContent = TAREFAS.filter(t=>t.armazem===arm&&t.status==='aberta').length;
+  document.getElementById('tbl-tarefas').innerHTML = `
+    <thead><tr><th>Descrição</th><th>Área</th><th>Origem</th><th>Executor</th><th>Prazo</th><th>Status</th></tr></thead>
+    <tbody>${data.length===0?`<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhuma tarefa ${tab==='abertas'?'em aberto':'concluída'}</td></tr>`:
+    data.map(t=>`<tr>
+      <td style="max-width:240px">${t.desc}</td>
+      <td>${t.area}</td>
+      <td><span class="badge ${t.tipo==='5s'?'badge-warn':'badge-nok'}">${t.tipo==='5s'?'5S Ronda':'Ronda'}</span></td>
+      <td><div style="display:flex;align-items:center;gap:6px"><div class="exec-avatar" style="width:24px;height:24px;font-size:10px">${t.executor[0]}</div>${t.executor}</div></td>
+      <td style="color:${new Date(t.prazo)<now&&t.status==='aberta'?'var(--nok)':'var(--text)'}">${t.prazo}</td>
+      <td><span class="badge ${t.status==='concluida'?'badge-ok':'badge-nok'}">${t.status==='concluida'?'✓ Feita':'Aberta'}</span></td>
+    </tr>`).join('')}</tbody>`;
+}
+
+// ===================== CRONOGRAMA =====================
+function renderCronograma() {
+  const arm = document.getElementById('global-armazem').value;
+  const tasks = cronogramas[arm]||[];
+  populateMcUsers();
+  const header = `<tr><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th><th>Sábado</th></tr>`;
+  const maxTasks = Math.max(...DAYS.map((_,di)=>tasks.filter(t=>t.day===di).length));
+  let rows = '';
+  for(let r=0;r<maxTasks;r++){
+    rows += '<tr>';
+    DAYS.forEach((_,di)=>{
+      const dayTasks = tasks.filter(t=>t.day===di);
+      const t = dayTasks[r];
+      rows += `<td>${t?`<span class="cron-task">${t.desc}<br><span class="cron-user">👤 ${t.user}</span></span>`:'<span style="color:var(--text3);font-size:11px">—</span>'}</td>`;
+    });
+    rows += '</tr>';
+  }
+  document.getElementById('tbl-cron').innerHTML = `<thead>${header}</thead><tbody>${rows}</tbody>`;
+}
+
+function populateMcUsers() {
+  const arm = document.getElementById('global-armazem').value;
+  const sel = document.getElementById('mc-user');
+  sel.innerHTML = (USERS[arm]||[]).map(u=>`<option>${u}</option>`).join('');
+}
+
+function openAddCronModal() { populateMcUsers(); document.getElementById('modal-cron').classList.add('open'); }
+
+function saveCronTask() {
+  const arm = document.getElementById('global-armazem').value;
+  const desc = document.getElementById('mc-desc').value.trim();
+  const area = document.getElementById('mc-area').value;
+  const user = document.getElementById('mc-user').value;
+  const days = [...document.querySelectorAll('#mc-days input:checked')].map(c=>parseInt(c.value));
+  if(!desc||days.length===0){alert('Preencha a descrição e selecione os dias.');return;}
+  days.forEach(di=>{
+    cronogramas[arm].push({id:`${arm}-${di}-${Date.now()}`,desc,area,day:di,user});
+  });
+  closeModal('modal-cron');
+  renderCronograma();
+}
+
+// ===================== ADERÊNCIA 5S =====================
+function renderAderencia5S() {
+  const arm = document.getElementById('global-armazem').value;
+  const users = USERS[arm]||[];
+  const curPct = HIST_5S_ADH[5].val;
+  const prevPct = HIST_5S_ADH[4].val;
+  const diff = curPct - prevPct;
+
+  document.getElementById('adh5s-kpis').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Aderência geral</div>
+      <div class="kpi-value" style="color:${getColor(curPct)}">${curPct}%</div>
+      <div class="kpi-sub">mês atual</div>
+      <div class="kpi-trend ${diff>=0?'trend-up':'trend-dn'}">${diff>=0?'↑':'↓'} ${Math.abs(diff)}pp vs mês ant.</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Tarefas concluídas</div>
+      <div class="kpi-value">${Math.round(curPct*0.8)}</div>
+      <div class="kpi-sub">de ${Math.round(curPct*0.8/curPct*100)} atribuídas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Meta 80%</div>
+      <div class="kpi-value" style="color:${curPct>=80?'var(--ok)':'var(--nok)'}">${curPct>=80?'✓ Atingida':'✗ Abaixo'}</div>
+      <div class="kpi-sub">${Math.abs(80-curPct)}pp ${curPct>=80?'acima':'abaixo'} da meta</div>
+    </div>`;
+
+  buildLineChart('chart-adh5s', HIST_5S_ADH, '#15803d');
+
+  // Por executor
+  document.getElementById('adh5s-executores').innerHTML = users.map((u,i)=>{
+    const pct = Math.min(100,Math.max(30,curPct+(u.charCodeAt(0)%20)-10));
+    return `<div class="exec-row">
+      <div class="exec-avatar">${u[0]}</div>
+      <div class="exec-info"><div class="exec-name">${u}</div>
+        <div style="margin-top:4px"><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${getColor(pct)}"></div></div></div>
+      </div>
+      <div class="exec-pct" style="color:${getColor(pct)}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  // Por dia
+  document.getElementById('adh5s-dias').innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">` +
+    DAYS.map(d=>{
+      const pct = Math.min(100,Math.max(40,curPct+((d.charCodeAt(0))%20)-10));
+      return `<div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span>${d}</span><span style="font-weight:700;color:${getColor(pct)}">${pct}%</span></div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${getColor(pct)}"></div></div></div>`;
+    }).join('') + '</div>';
+}
+
+// ===================== AUDITORIA 5S =====================
+function renderAuditoria() {
+  const arm = document.getElementById('global-armazem').value;
+  const mk = mkKey(monthOffset);
+  const isCurrent = monthOffset===0;
+
+  const histAreas = isCurrent ? {} : (HIST_AUDIT_AREAS[`${arm}||${mk}`]||{});
+  const audited = Object.keys(histAreas).length || (isCurrent?7:0);
+  const adhPct = Math.round((audited/AREAS.length)*100);
+  const confMedia = Object.keys(histAreas).length>0
+    ? Math.round(Object.values(histAreas).reduce((s,a)=>s+a.overall,0)/Object.values(histAreas).length)
+    : (isCurrent?70:null);
+
+  document.getElementById('audit-area-month').textContent = new Date(now.getFullYear(),now.getMonth()+monthOffset,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('audit-kpis').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Aderência às auditorias</div>
+      <div class="kpi-value" style="color:${getColor(adhPct)}">${adhPct}%</div>
+      <div class="kpi-sub">${audited} de ${AREAS.length} áreas auditadas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Média de conformidade</div>
+      <div class="kpi-value" style="color:${confMedia?getColor(confMedia):'var(--text3)'}">${confMedia?confMedia+'%':'—'}</div>
+      <div class="kpi-sub">áreas auditadas no mês</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Áreas abaixo de 80%</div>
+      <div class="kpi-value" style="color:var(--warn)">${Object.values(histAreas).filter(a=>a.overall<80).length||3}</div>
+      <div class="kpi-sub">requerem atenção</div>
+    </div>`;
+
+  buildLineChart('chart-audit-conf', HIST_AUDIT_CONF, '#6d28d9');
+  buildLineChart('chart-audit-adh2', HIST_AUDIT_ADH, '#b45309');
+
+  document.getElementById('audit-areas-grid').innerHTML = AREAS.map(area=>{
+    const aud = histAreas[area];
+    const owner = (areaDonos[`${arm}||${area}`]||{})[mk] || '—';
+    const pct = aud?aud.overall:(isCurrent&&AREAS.indexOf(area)<7?65+((AREAS.indexOf(area)*13)%25):null);
+    const c = pct?getColor(pct):'var(--text3)';
+    return `<div class="area-card">
+      <div class="area-card-top">
+        <div><div class="area-name">${area}</div><div class="area-owner">👤 ${owner}</div></div>
+        <span class="badge ${pct?getBadgeClass(pct):'badge-pend'}">${pct?pct+'%':'Pendente'}</span>
+      </div>
+      ${pct?`<div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${c}"></div></div>`:'<div class="prog-bar"></div>'}
+    </div>`;
+  }).join('');
+}
+
+// ===================== DONOS =====================
+function renderDonos() {
+  const arm = document.getElementById('global-armazem').value;
+  const sel = document.getElementById('donos-month-sel');
+  if(sel.options.length===0){
+    for(let mo=0;mo>=-5;mo--){
+      const mk=mkKey(mo);
+      const d=new Date(now.getFullYear(),now.getMonth()+mo,1);
+      sel.innerHTML+=`<option value="${mk}">${d.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</option>`;
+    }
+  }
+  const mk = sel.value;
+  document.getElementById('tbl-donos').innerHTML = `
+    <thead><tr><th>Área</th><th>Dono do 5S</th><th>Última Auditoria</th><th>Resultado</th><th></th></tr></thead>
+    <tbody>${AREAS.map(area=>{
+      const key=`${arm}||${area}`;
+      const owner=(areaDonos[key]||{})[mk]||'(não definido)';
+      const histKey=`${arm}||${mkKey(-1)}`;
+      const lastAudit=(HIST_AUDIT_AREAS[histKey]||{})[area];
+      return `<tr>
+        <td style="font-weight:500">${area}</td>
+        <td><div style="display:flex;align-items:center;gap:6px"><div class="exec-avatar" style="width:24px;height:24px;font-size:10px">${owner[0]||'?'}</div>${owner}</div></td>
+        <td style="color:var(--text3)">${lastAudit?new Date(now.getFullYear(),now.getMonth()-1,15).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—'}</td>
+        <td>${lastAudit?`<span class="badge ${getBadgeClass(lastAudit.overall)}">${lastAudit.overall}%</span>`:'<span class="badge badge-pend">Sem dados</span>'}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="openDonoModal('${arm}','${area}','${mk}')">Alterar</button></td>
+      </tr>`;
+    }).join('')}</tbody>`;
+}
+
+function openDonoModal(arm, area, mk) {
+  editingDono = {arm,area,mk};
+  document.getElementById('modal-dono-title').innerHTML = `Dono de ${area} <button class="modal-close" onclick="closeModal('modal-dono')">×</button>`;
+  const cur = (areaDonos[`${arm}||${area}`]||{})[mk]||'';
+  document.getElementById('md-user').innerHTML = (USERS[arm]||[]).map(u=>`<option${u===cur?' selected':''}>${u}</option>`).join('');
+  document.getElementById('modal-dono').classList.add('open');
+}
+
+function saveDono() {
+  const {arm,area,mk} = editingDono;
+  const u = document.getElementById('md-user').value;
+  if(!areaDonos[`${arm}||${area}`]) areaDonos[`${arm}||${area}`]={};
+  areaDonos[`${arm}||${area}`][mk] = u;
+  closeModal('modal-dono');
+  renderDonos();
+}
+
+// ===================== USUÁRIOS =====================
+function renderUsuarios() {
+  document.getElementById('usuarios-grid').innerHTML = Object.entries(USERS).map(([arm,users])=>`
+    <div class="card">
+      <div class="card-header"><h3>🏭 ${arm}</h3><span style="font-size:12px;color:var(--text3)">${users.length} usuários</span></div>
+      <div class="card-body">${users.map(u=>`
+        <div class="exec-row">
+          <div class="exec-avatar">${u[0]}</div>
+          <div class="exec-info"><div class="exec-name">${u}</div><div class="exec-detail">Executor 5S · ${arm}</div></div>
+          <span class="badge badge-ok">Ativo</span>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ===================== MODALS =====================
+function openNewRondaModal() {
+  document.getElementById('nr-dt').value = new Date().toISOString().slice(0,16);
+  document.getElementById('modal-ronda').classList.add('open');
+}
+
+function saveNewRonda() {
+  const arm = document.getElementById('nr-armazem').value;
+  RONDAS_HIST.unshift({id:'r'+Date.now(),armazem:arm,dt:new Date().toISOString().slice(0,10),auditora:'Talita',overall:0,nok:0,tasks:0});
+  closeModal('modal-ronda');
+  alert('Ronda criada! Abra o App Ronda no celular para realizar o checklist.');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ===================== INIT =====================
+updateMonthDisplay();
+document.getElementById('month-next').style.opacity='0.3';
+document.getElementById('month-next').disabled=true;
+renderDashboard();
+renderTarefas('abertas');
+
+// Mobile menu
+if(window.innerWidth<=900) document.getElementById('menu-btn').style.display='block';
+document.addEventListener('click',e=>{
+  const sidebar=document.getElementById('sidebar');
+  if(window.innerWidth<=900&&!sidebar.contains(e.target)&&sidebar.classList.contains('open'))
+    sidebar.classList.remove('open');
+});
+</script>
+</body>
+</html>
