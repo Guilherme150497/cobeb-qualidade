@@ -378,9 +378,73 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ===== USUÁRIOS ===== -->
     <div class="page" id="page-usuarios">
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px" id="usuarios-grid"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:4px">Total de usuários</div>
+          <div style="font-size:22px;font-weight:700" id="total-users-count">—</div>
+        </div>
+        <button class="btn btn-primary" onclick="openNovoUsuarioModal()">+ Novo Usuário</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>Usuários Cadastrados</h3>
+          <select id="filter-armazem-users" onchange="renderUsuarios()" style="padding:5px 8px;border:1px solid var(--border-strong);border-radius:6px;font-size:12px;background:var(--surface)">
+            <option value="">Todos os armazéns</option>
+            <option>Pará de Minas</option>
+            <option>Lagoa da Prata</option>
+            <option>Abaeté</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table" id="tbl-usuarios"></table>
+        </div>
+      </div>
     </div>
 
+  </div>
+</div>
+
+<!-- MODAL: NOVO/EDITAR USUÁRIO -->
+<div class="modal-bg" id="modal-usuario">
+  <div class="modal-box">
+    <h3 id="modal-user-title">Novo Usuário <button class="modal-close" onclick="closeModal('modal-usuario')">×</button></h3>
+    <div id="modal-user-status" style="display:none;padding:10px 12px;border-radius:6px;margin-bottom:14px;font-size:13px"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Nome completo *</label><input type="text" id="u-nome" placeholder="Ex: Matheuzão"></div>
+      <div class="form-group"><label>Perfil *</label>
+        <select id="u-perfil">
+          <option value="executor">Executor 5S</option>
+          <option value="supervisora">Supervisora</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Armazém *</label>
+        <select id="u-armazem">
+          <option value="">Selecionar...</option>
+          <option>Pará de Minas</option>
+          <option>Lagoa da Prata</option>
+          <option>Abaeté</option>
+        </select>
+      </div>
+      <div class="form-group"><label>CPF (somente números) *</label><input type="tel" id="u-cpf" placeholder="00000000000" maxlength="11" inputmode="numeric"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de nascimento * <span style="font-size:11px;color:var(--text3)">(será a senha)</span></label><input type="date" id="u-nascimento"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="u-ativo">
+          <option value="true">Ativo</option>
+          <option value="false">Inativo</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:var(--accent-bg);border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:12px;color:var(--text2)">
+      🔑 O login do usuário será: <strong>CPF@cobeb.com</strong> com senha <strong>DDMMAAAA</strong> (data de nascimento)
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-salvar-usuario" onclick="salvarUsuario()">Cadastrar no Firebase ✓</button>
+    </div>
   </div>
 </div>
 
@@ -560,7 +624,7 @@ function renderPage(page) {
   if(page==='aderencia5s') renderAderencia5S();
   if(page==='auditoria') renderAuditoria();
   if(page==='donos') renderDonos();
-  if(page==='usuarios') renderUsuarios();
+  if(page==='usuarios') { loadUsuarios().then(renderUsuarios); }
 }
 
 function onArmazemChange() { renderPage(currentPage); }
@@ -909,18 +973,169 @@ function saveDono() {
 }
 
 // ===================== USUÁRIOS =====================
+// ===================== USUÁRIOS =====================
+// Lista local de usuários (carregada do Firebase)
+let usuariosCadastrados = [];
+
+async function loadUsuarios() {
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getFirestore, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
+      authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
+      projectId: "controle-de-qualidade-armazem",
+      storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
+      messagingSenderId: "76797503134",
+      appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+    };
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const snap = await getDocs(collection(db, 'usuarios'));
+    usuariosCadastrados = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  } catch(e) {
+    console.log('Firebase não conectado, usando dados locais');
+    // Popula com dados locais se Firebase não disponível
+    usuariosCadastrados = [];
+    Object.entries(USERS).forEach(([arm, users]) => {
+      users.forEach(u => usuariosCadastrados.push({nome:u, armazem:arm, perfil:'executor', ativo:true}));
+    });
+  }
+}
+
 function renderUsuarios() {
-  document.getElementById('usuarios-grid').innerHTML = Object.entries(USERS).map(([arm,users])=>`
-    <div class="card">
-      <div class="card-header"><h3>🏭 ${arm}</h3><span style="font-size:12px;color:var(--text3)">${users.length} usuários</span></div>
-      <div class="card-body">${users.map(u=>`
-        <div class="exec-row">
-          <div class="exec-avatar">${u[0]}</div>
-          <div class="exec-info"><div class="exec-name">${u}</div><div class="exec-detail">Executor 5S · ${arm}</div></div>
-          <span class="badge badge-ok">Ativo</span>
-        </div>`).join('')}
-      </div>
-    </div>`).join('');
+  const filterArm = document.getElementById('filter-armazem-users')?.value || '';
+  const filtered = filterArm ? usuariosCadastrados.filter(u => u.armazem === filterArm) : usuariosCadastrados;
+  document.getElementById('total-users-count').textContent = filtered.length + ' usuário(s)';
+  document.getElementById('tbl-usuarios').innerHTML = `
+    <thead><tr><th>Nome</th><th>CPF</th><th>Armazém</th><th>Perfil</th><th>Status</th><th></th></tr></thead>
+    <tbody>${filtered.length === 0
+      ? `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:24px">Nenhum usuário cadastrado ainda</td></tr>`
+      : filtered.map(u => `<tr>
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <div class="exec-avatar" style="width:28px;height:28px;font-size:11px">${(u.nome||'?')[0]}</div>
+          <span style="font-weight:500">${u.nome||'—'}</span>
+        </div></td>
+        <td style="color:var(--text3);font-size:12px">${u.id||'—'}</td>
+        <td>${u.armazem||'—'}</td>
+        <td><span class="badge ${u.perfil==='supervisora'?'badge-warn':'badge-ok'}">${u.perfil==='supervisora'?'Supervisora':'Executor'}</span></td>
+        <td><span class="badge ${u.ativo!==false?'badge-ok':'badge-nok'}">${u.ativo!==false?'Ativo':'Inativo'}</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="editarUsuario('${u.id}')">Editar</button></td>
+      </tr>`).join('')}
+    </tbody>`;
+}
+
+function openNovoUsuarioModal() {
+  document.getElementById('modal-user-title').innerHTML = 'Novo Usuário <button class="modal-close" onclick="closeModal(\'modal-usuario\')">×</button>';
+  document.getElementById('u-nome').value = '';
+  document.getElementById('u-cpf').value = '';
+  document.getElementById('u-nascimento').value = '';
+  document.getElementById('u-armazem').value = '';
+  document.getElementById('u-perfil').value = 'executor';
+  document.getElementById('u-ativo').value = 'true';
+  document.getElementById('modal-user-status').style.display = 'none';
+  document.getElementById('btn-salvar-usuario').textContent = 'Cadastrar no Firebase ✓';
+  document.getElementById('modal-usuario').classList.add('open');
+}
+
+function editarUsuario(cpf) {
+  const u = usuariosCadastrados.find(x => x.id === cpf);
+  if (!u) return;
+  document.getElementById('modal-user-title').innerHTML = `Editar — ${u.nome} <button class="modal-close" onclick="closeModal('modal-usuario')">×</button>`;
+  document.getElementById('u-nome').value = u.nome || '';
+  document.getElementById('u-cpf').value = u.id || '';
+  document.getElementById('u-cpf').readOnly = true;
+  document.getElementById('u-armazem').value = u.armazem || '';
+  document.getElementById('u-perfil').value = u.perfil || 'executor';
+  document.getElementById('u-ativo').value = u.ativo !== false ? 'true' : 'false';
+  document.getElementById('modal-user-status').style.display = 'none';
+  document.getElementById('btn-salvar-usuario').textContent = 'Salvar alterações ✓';
+  document.getElementById('modal-usuario').classList.add('open');
+}
+
+async function salvarUsuario() {
+  const nome = document.getElementById('u-nome').value.trim();
+  const cpf = document.getElementById('u-cpf').value.trim();
+  const nascimento = document.getElementById('u-nascimento').value;
+  const armazem = document.getElementById('u-armazem').value;
+  const perfil = document.getElementById('u-perfil').value;
+  const ativo = document.getElementById('u-ativo').value === 'true';
+  const statusEl = document.getElementById('modal-user-status');
+
+  if (!nome || !cpf || !armazem) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--nok-bg)';
+    statusEl.style.color = 'var(--nok)';
+    statusEl.textContent = '⚠️ Preencha nome, CPF e armazém.';
+    return;
+  }
+  if (cpf.length !== 11) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--nok-bg)';
+    statusEl.style.color = 'var(--nok)';
+    statusEl.textContent = '⚠️ CPF deve ter 11 dígitos.';
+    return;
+  }
+
+  const btn = document.getElementById('btn-salvar-usuario');
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+
+  try {
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getAuth, createUserWithEmailAndPassword, updatePassword } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    const { getFirestore, doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMkvwQ4dfMbv3ETSvV38qH1LYUx_d-VNo",
+      authDomain: "controle-de-qualidade-armazem.firebaseapp.com",
+      projectId: "controle-de-qualidade-armazem",
+      storageBucket: "controle-de-qualidade-armazem.firebasestorage.app",
+      messagingSenderId: "76797503134",
+      appId: "1:76797503134:web:86afbfc6373f5d2a08bd8f"
+    };
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const email = `${cpf}@cobeb.com`;
+    // Senha = DDMMAAAA
+    let senha = '01011990'; // padrão se não informar data
+    if (nascimento) {
+      const [y,m,d] = nascimento.split('-');
+      senha = `${d}${m}${y}`;
+    }
+
+    // Cria usuário no Auth
+    try {
+      await createUserWithEmailAndPassword(auth, email, senha);
+    } catch(authErr) {
+      if (authErr.code !== 'auth/email-already-in-use') throw authErr;
+      // Se já existe, apenas atualiza o Firestore
+    }
+
+    // Salva no Firestore
+    await setDoc(doc(db, 'usuarios', cpf), {nome, armazem, perfil, ativo});
+
+    // Atualiza lista local
+    const existing = usuariosCadastrados.findIndex(u => u.id === cpf);
+    if (existing >= 0) usuariosCadastrados[existing] = {id:cpf, nome, armazem, perfil, ativo};
+    else usuariosCadastrados.push({id:cpf, nome, armazem, perfil, ativo});
+
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--ok-bg)';
+    statusEl.style.color = 'var(--ok)';
+    statusEl.textContent = `✓ Usuário "${nome}" cadastrado! Login: ${email} · Senha: ${senha}`;
+    btn.textContent = 'Cadastrado ✓'; btn.disabled = false;
+    renderUsuarios();
+
+  } catch(e) {
+    console.error(e);
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'var(--nok-bg)';
+    statusEl.style.color = 'var(--nok)';
+    statusEl.textContent = `⚠️ Erro: ${e.message}`;
+    btn.textContent = 'Tentar novamente'; btn.disabled = false;
+  }
 }
 
 // ===================== MODALS =====================
